@@ -119,14 +119,20 @@ def generate_project(rng: random.Random, project_number: int) -> dict:
         5000,
     )
 
-    affected_families = max(
-        1,
-        int(land_area * rng.uniform(0.4, 2.5)),
+    affected_families = int(
+        clamp(
+            land_area * rng.uniform(0.4, 2.5),
+            1,
+            5000,
+        )
     )
 
-    total_parcels = max(
-        1,
-        int(land_area * rng.uniform(0.5, 3.0)),
+    total_parcels = int(
+        clamp(
+            land_area * rng.uniform(0.5, 3.0),
+            1,
+            5000,
+        )
     )
 
     planned_duration = int(
@@ -170,47 +176,126 @@ def generate_historical_context(
     project: dict,
 ) -> dict:
     """
-    Generate historical information that would plausibly be known
-    before the current project snapshot.
+    Generate deterministic historical context based on the
+    project's district and project type.
+
+    These values represent historical patterns that would
+    plausibly be known before making a prediction.
     """
 
-    district_rate = clamp(
-        rng.betavariate(3, 7),
-        0.05,
-        0.65,
+    # --------------------------------------------------------
+    # District historical delay rates
+    # --------------------------------------------------------
+
+    district_delay_rates = {
+        "Pune": 0.28,
+        "Nashik": 0.22,
+        "Ahmednagar": 0.34,
+        "Nagpur": 0.30,
+        "Aurangabad": 0.32,
+        "Thane": 0.38,
+        "Navi Mumbai": 0.35,
+
+        "Ahmedabad": 0.24,
+        "Surat": 0.21,
+        "Vadodara": 0.26,
+        "Rajkot": 0.23,
+
+        "Bengaluru": 0.36,
+        "Mysuru": 0.27,
+        "Hubballi": 0.31,
+        "Mangaluru": 0.25,
+
+        "Lucknow": 0.33,
+        "Kanpur": 0.37,
+        "Agra": 0.35,
+        "Varanasi": 0.40,
+
+        "Jaipur": 0.29,
+        "Jodhpur": 0.27,
+        "Kota": 0.30,
+        "Udaipur": 0.25,
+
+        "Indore": 0.24,
+        "Bhopal": 0.28,
+        "Jabalpur": 0.32,
+        "Gwalior": 0.34,
+    }
+
+    # --------------------------------------------------------
+    # Project-type historical delay rates
+    # --------------------------------------------------------
+
+    project_type_delay_rates = {
+        "Highway": 0.32,
+        "Railway": 0.40,
+        "Metro": 0.43,
+        "Industrial": 0.29,
+        "Irrigation": 0.31,
+        "Power": 0.35,
+        "Urban Development": 0.36,
+    }
+
+    district_rate = district_delay_rates.get(
+        project["district"],
+        0.30,
     )
 
-    project_type_rate = clamp(
-        rng.betavariate(3, 7),
-        0.05,
-        0.65,
+    project_type_rate = project_type_delay_rates.get(
+        project["project_type"],
+        0.30,
     )
+
+    # --------------------------------------------------------
+    # Authority historical rate
+    #
+    # Keep this as a project-level latent historical factor.
+    # It is not directly tied to the target.
+    # --------------------------------------------------------
 
     authority_rate = clamp(
-        rng.betavariate(3, 7),
+        rng.gauss(
+            0.30,
+            0.08,
+        ),
         0.05,
         0.65,
     )
 
+    # --------------------------------------------------------
+    # Historical average delay
+    # --------------------------------------------------------
+
     avg_delay = clamp(
-        rng.lognormvariate(math.log(45), 0.65),
+        rng.lognormvariate(
+            math.log(45),
+            0.65,
+        ),
         5,
         180,
     )
 
     return {
-        "district_historical_delay_rate": round(district_rate, 4),
+        "district_historical_delay_rate": round(
+            district_rate,
+            4,
+        ),
+
         "project_type_historical_delay_rate": round(
             project_type_rate,
             4,
         ),
+
         "authority_historical_delay_rate": round(
             authority_rate,
             4,
         ),
-        "historical_avg_delay_days": round(avg_delay, 2),
-    }
 
+        "historical_avg_delay_days": round(
+            avg_delay,
+            2,
+        ),
+    }
 
 # ============================================================
 # Project state simulation
@@ -241,13 +326,19 @@ def generate_state_at_day(
         1,
     )
 
-    # Harder projects progress more slowly.
-    progress_noise = rng.gauss(0, 0.07)
+    # Baseline progress before operational bottlenecks.
+    progress_factor = clamp(
+        rng.gauss(
+            1.00 - complexity * 0.20,
+            0.12,
+        ),
+        0.55,
+        1.15,
+    )
 
-    acquisition_progress = clamp(
-        expected_progress
-        * (1.05 - complexity * 0.35)
-        + progress_noise,
+    baseline_progress = clamp(
+        expected_progress * progress_factor
+        + rng.gauss(0, 0.035),
         0,
         1,
     )
@@ -307,7 +398,7 @@ def generate_state_at_day(
 
     documents_verified = int(
         documents_required
-        * acquisition_progress
+        * baseline_progress
         * documentation_quality
     )
 
@@ -340,7 +431,7 @@ def generate_state_at_day(
     )
 
     compensation_completion = clamp(
-        acquisition_progress
+        baseline_progress
         * (0.95 - complexity * 0.25)
         + rng.gauss(0, 0.05),
         0,
@@ -439,6 +530,32 @@ def generate_state_at_day(
                 0.30,
             )
         ),
+    )
+    # --------------------------------------------------------
+    # Actual acquisition progress
+    # --------------------------------------------------------
+    # Operational bottlenecks slow progress, but do not
+    # completely determine it. This keeps the synthetic
+    # relationship realistic and leaves useful signal for ML.
+
+    bottleneck_drag = (
+        active_legal * 0.008
+        + ownership_disputes * 0.018
+        + court_stays * 0.045
+        + approvals_pending * 0.012
+        + overdue_approvals * 0.018
+        + pending_objections / max(
+            1,
+            project["affected_families"],
+        ) * 0.12
+    )
+
+    acquisition_progress = clamp(
+        baseline_progress
+        * (1 - bottleneck_drag)
+        + rng.gauss(0, 0.025),
+        0,
+        1,
     )
 
     # --------------------------------------------------------
@@ -552,11 +669,13 @@ def generate_state_at_day(
         milestones_due - milestones_completed,
     )
 
+    expected_day_for_progress = (
+        acquisition_progress
+        * project["planned_duration_days"]
+    )
+
     schedule_variance = (
-        day
-        - project["planned_duration_days"]
-        * expected_progress
-        * (1 - acquisition_progress + expected_progress)
+        day - expected_day_for_progress
     )
 
     # --------------------------------------------------------
@@ -762,9 +881,52 @@ def calculate_target(
 
     complexity = project["complexity_score"] / 100
 
-    risk = -1.8
+    risk = -3.0
+
+    risk += (
+        state["district_historical_delay_rate"]
+        - 0.30
+    ) * 1.5
+
+    risk += (
+        state["project_type_historical_delay_rate"]
+        - 0.30
+    ) * 1.2
+
+    risk += (
+        state["authority_historical_delay_rate"]
+        - 0.30
+    ) * 0.8
+
+    risk += clamp(
+        state["historical_avg_delay_days"] / 180,
+        0,
+        1,
+    ) * 0.4
 
     risk += complexity * 1.4
+
+    # Historical risk context.
+    risk += (
+        state["district_historical_delay_rate"]
+        - 0.30
+    ) * 1.2
+
+    risk += (
+        state["project_type_historical_delay_rate"]
+        - 0.30
+    ) * 1.0
+
+    risk += (
+        state["authority_historical_delay_rate"]
+        - 0.30
+    ) * 0.8
+
+    risk += clamp(
+        state["historical_avg_delay_days"] / 180,
+        0,
+        1,
+    ) * 0.5
 
     risk += clamp(
         state["schedule_variance_days"] / 120,
@@ -909,7 +1071,13 @@ def generate_project_snapshots(
     project: dict,
     history: dict,
 ) -> list[dict]:
-    """Generate multiple time snapshots for one project."""
+    """
+    Generate multiple temporally consistent snapshots for one project.
+
+    Unlike the old implementation, project progress is generated from
+    one underlying trajectory. Later snapshots therefore generally
+    reflect the accumulated state of earlier snapshots.
+    """
 
     max_day = min(
         project["planned_duration_days"],
@@ -924,7 +1092,6 @@ def generate_project_snapshots(
         )
     )
 
-    # Every project gets several observations.
     snapshot_count = min(
         len(possible_days),
         rng.randint(5, 10),
@@ -937,47 +1104,820 @@ def generate_project_snapshots(
         )
     )
 
+    # --------------------------------------------------------
+    # Generate fixed project-level characteristics
+    # --------------------------------------------------------
+
+    complexity = project["complexity_score"] / 100.0
+
+    # A project-level operational factor makes some projects
+    # consistently faster/slower across all snapshots.
+    project_speed = clamp(
+        rng.gauss(
+            1.0 - complexity * 0.20,
+            0.08,
+        ),
+        0.65,
+        1.10,
+    )
+
+    # Project-level legal pressure remains relatively stable.
+    legal_pressure = clamp(
+        rng.gauss(
+            0.5 + complexity * 2.5,
+            1.0,
+        ),
+        0.1,
+        8.0,
+    )
+
+    # Project-level documentation quality.
+    documentation_quality = clamp(
+        rng.gauss(
+            0.92 - complexity * 0.25,
+            0.04,
+        ),
+        0.40,
+        1.0,
+    )
+
+    # Project-level stakeholder responsiveness.
+    stakeholder_factor = clamp(
+        rng.gauss(
+            1.0 - complexity * 0.30,
+            0.08,
+        ),
+        0.60,
+        1.10,
+    )
+
     rows = []
 
     for day in days:
-        state = generate_state_at_day(
-            rng,
-            project,
-            day,
-            history,
+
+        # ====================================================
+        # BASE PROGRESS
+        # ====================================================
+
+        expected_progress = clamp(
+            day / project["planned_duration_days"],
+            0,
+            1,
         )
 
-        will_be_delayed, delay_days, delay_stage = calculate_target(
-            rng,
-            project,
-            state,
+        # Small snapshot noise, but the underlying trajectory
+        # remains controlled by project_speed.
+        progress = clamp(
+            expected_progress
+            * project_speed
+            + rng.gauss(0, 0.015),
+            0,
+            1,
         )
 
-        snapshot_date = (
-            project["start_date"]
-            + timedelta(days=day)
+        # ====================================================
+        # LEGAL RISK
+        # ====================================================
+
+        active_legal = max(
+            0,
+            int(
+                round(
+                    legal_pressure
+                    * (
+                        0.75
+                        + progress * 0.25
+                    )
+                    + rng.gauss(0, 0.6)
+                )
+            ),
         )
+
+        ownership_probability = clamp(
+            0.05 + complexity * 0.30,
+            0.02,
+            0.45,
+        )
+
+        ownership_disputes = (
+            rng.randint(
+                1,
+                max(1, active_legal),
+            )
+            if (
+                active_legal > 0
+                and rng.random() < ownership_probability
+            )
+            else 0
+        )
+
+        court_stays = (
+            rng.randint(
+                1,
+                max(1, ownership_disputes),
+            )
+            if (
+                ownership_disputes > 0
+                and rng.random() < 0.20
+            )
+            else 0
+        )
+
+        # ====================================================
+        # DOCUMENTATION
+        # ====================================================
+
+        documents_required = max(
+            4,
+            int(
+                project["total_parcels"]
+                * rng.uniform(0.5, 1.2)
+            ),
+        )
+
+        documents_verified = int(
+            documents_required
+            * progress
+            * documentation_quality
+        )
+
+        documents_verified = min(
+            documents_required,
+            max(0, documents_verified),
+        )
+
+        documents_pending = (
+            documents_required
+            - documents_verified
+        )
+
+        # ====================================================
+        # COMPENSATION
+        # ====================================================
+
+        compensation_total = (
+            project["land_area_hectares"]
+            * rng.uniform(
+                800_000,
+                2_500_000,
+            )
+        )
+
+        assessed_ratio = clamp(
+            0.85 + rng.gauss(0, 0.08),
+            0.60,
+            1.05,
+        )
+
+        compensation_assessed = (
+            compensation_total
+            * assessed_ratio
+        )
+
+        compensation_completion = clamp(
+            progress
+            * (
+                0.95
+                - complexity * 0.25
+            )
+            + rng.gauss(0, 0.02),
+            0,
+            1,
+        )
+
+        compensation_disbursed = (
+            compensation_assessed
+            * compensation_completion
+        )
+
+        compensation_pending = max(
+            0,
+            compensation_assessed
+            - compensation_disbursed,
+        )
+
+        compensation_pending_cases = max(
+            0,
+            int(
+                project["affected_families"]
+                * (
+                    1
+                    - compensation_completion
+                )
+            ),
+        )
+
+        avg_compensation_delay = (
+            max(
+                0,
+                rng.gauss(
+                    15 + complexity * 100,
+                    10,
+                ),
+            )
+            if compensation_pending_cases > 0
+            else 0
+        )
+
+        # ====================================================
+        # APPROVALS
+        # ====================================================
+
+        approvals_required = max(
+            2,
+            int(
+                3
+                + complexity * 5
+            ),
+        )
+
+        approval_completion = clamp(
+            progress
+            * (
+                1.05
+                - complexity * 0.20
+            )
+            + rng.gauss(0, 0.02),
+            0,
+            1,
+        )
+
+        approvals_completed = min(
+            approvals_required,
+            int(
+                approvals_required
+                * approval_completion
+            ),
+        )
+
+        approvals_pending = (
+            approvals_required
+            - approvals_completed
+        )
+
+        avg_approval_delay = (
+            max(
+                0,
+                rng.gauss(
+                    10 + complexity * 70,
+                    8,
+                ),
+            )
+            if approvals_pending > 0
+            else 0
+        )
+
+        overdue_approvals = max(
+            0,
+            int(
+                approvals_pending
+                * clamp(
+                    0.2 + complexity * 0.6,
+                    0,
+                    1,
+                )
+            ),
+        )
+
+        # ====================================================
+        # OBJECTIONS
+        # ====================================================
+
+        pending_objections = max(
+            0,
+            int(
+                project["affected_families"]
+                * clamp(
+                    0.01
+                    + complexity * 0.08
+                    + rng.gauss(0, 0.005),
+                    0,
+                    0.30,
+                )
+            ),
+        )
+
+        # ====================================================
+        # ACQUISITION
+        # ====================================================
+
+        bottleneck_drag = (
+            active_legal * 0.008
+            + ownership_disputes * 0.018
+            + court_stays * 0.045
+            + approvals_pending * 0.012
+            + overdue_approvals * 0.018
+            + pending_objections
+            / max(
+                1,
+                project["affected_families"],
+            )
+            * 0.12
+        )
+
+        acquisition_progress = clamp(
+            progress
+            * (
+                1
+                - bottleneck_drag
+            )
+            + rng.gauss(0, 0.015),
+            0,
+            1,
+        )
+
+        parcels_acquired = int(
+            project["total_parcels"]
+            * acquisition_progress
+        )
+
+        parcels_pending = max(
+            0,
+            project["total_parcels"]
+            - parcels_acquired,
+        )
+
+        # ====================================================
+        # POSSESSION
+        # ====================================================
+
+        possession_progress = clamp(
+            acquisition_progress
+            * (
+                0.90
+                - ownership_disputes * 0.015
+                - court_stays * 0.05
+            )
+            + rng.gauss(0, 0.015),
+            0,
+            1,
+        )
+
+        possession_pending = max(
+            0,
+            project["total_parcels"]
+            - int(
+                project["total_parcels"]
+                * possession_progress
+            ),
+        )
+
+        # ====================================================
+        # R&R
+        # ====================================================
+
+        families_requiring_rr = int(
+            project["affected_families"]
+            * rng.uniform(0.25, 0.75)
+        )
+
+        rr_completion = clamp(
+            possession_progress
+            * (
+                0.90
+                - complexity * 0.20
+            )
+            + rng.gauss(0, 0.02),
+            0,
+            1,
+        )
+
+        families_rr_completed = min(
+            families_requiring_rr,
+            int(
+                families_requiring_rr
+                * rr_completion
+            ),
+        )
+
+        rr_pending = (
+            families_requiring_rr
+            - families_rr_completed
+        )
+
+        # ====================================================
+        # STAKEHOLDERS
+        # ====================================================
+
+        response_days = max(
+            1,
+            rng.gauss(
+                (
+                    8
+                    + complexity * 35
+                )
+                / stakeholder_factor,
+                3,
+            ),
+        )
+
+        responsiveness = clamp(
+            100
+            - response_days * 1.7,
+            0,
+            100,
+        )
+
+        pending_actions = max(
+            0,
+            int(
+                1
+                + complexity * 8
+                + approvals_pending * 0.5
+                + rng.gauss(0, 1.0)
+            ),
+        )
+
+        interdepartmental_actions = max(
+            0,
+            int(
+                pending_actions
+                * rng.uniform(
+                    0.25,
+                    0.65,
+                )
+            ),
+        )
+
+        # ====================================================
+        # MILESTONES
+        # ====================================================
+
+        milestones_due = max(
+            1,
+            int(day / 45),
+        )
+
+        milestone_completion = clamp(
+            acquisition_progress
+            * (
+                1.10
+                - complexity * 0.30
+            ),
+            0,
+            1,
+        )
+
+        milestones_completed = min(
+            milestones_due,
+            int(
+                milestones_due
+                * milestone_completion
+            ),
+        )
+
+        milestones_overdue = max(
+            0,
+            milestones_due
+            - milestones_completed,
+        )
+
+        # ====================================================
+        # SCHEDULE
+        # ====================================================
+
+        schedule_variance = (
+            day
+            - project["planned_duration_days"]
+            * acquisition_progress
+        )
+
+        # ====================================================
+        # CURRENT STAGE
+        # ====================================================
+
+        if acquisition_progress < 0.10:
+            current_stage = "Notification"
+
+        elif acquisition_progress < 0.30:
+            current_stage = "Survey"
+
+        elif acquisition_progress < 0.45:
+            current_stage = "Valuation"
+
+        elif acquisition_progress < 0.70:
+            current_stage = "Compensation"
+
+        elif acquisition_progress < 0.85:
+            current_stage = "Possession"
+
+        elif acquisition_progress < 0.97:
+            current_stage = "Rehabilitation"
+
+        else:
+            current_stage = "Closure"
+
+        stage_index = list(
+            STAGE_BASE_DURATIONS
+        ).index(current_stage)
+
+        previous_stage_fraction = (
+            stage_index
+            / len(STAGE_BASE_DURATIONS)
+        )
+
+        days_in_current_stage = max(
+            1,
+            int(
+                day
+                - previous_stage_fraction
+                * project["planned_duration_days"]
+            ),
+        )
+
+        stage_low, stage_high = (
+            STAGE_BASE_DURATIONS[current_stage]
+        )
+
+        planned_stage_duration = rng.randint(
+            stage_low,
+            stage_high,
+        )
+
+        # ====================================================
+        # STATE
+        # ====================================================
+
+        state = {
+            "current_stage": current_stage,
+
+            "days_since_notification": day,
+
+            "planned_duration_days":
+                project["planned_duration_days"],
+
+            "days_elapsed": day,
+
+            "days_in_current_stage":
+                days_in_current_stage,
+
+            "planned_stage_duration_days":
+                planned_stage_duration,
+
+            "schedule_variance_days":
+                round(
+                    schedule_variance,
+                    2,
+                ),
+
+            "milestones_due":
+                milestones_due,
+
+            "milestones_completed":
+                milestones_completed,
+
+            "milestones_overdue":
+                milestones_overdue,
+
+            "total_parcels":
+                project["total_parcels"],
+
+            "parcels_acquired":
+                parcels_acquired,
+
+            "parcels_pending":
+                parcels_pending,
+
+            "acquisition_progress_pct":
+                round(
+                    percentage(
+                        parcels_acquired,
+                        project["total_parcels"],
+                    ),
+                    2,
+                ),
+
+            "acquisition_velocity_pct_per_30d":
+                round(
+                    acquisition_progress
+                    / max(day, 30)
+                    * 30
+                    * 100,
+                    2,
+                ),
+
+            "possession_progress_pct":
+                round(
+                    possession_progress * 100,
+                    2,
+                ),
+
+            "possession_pending_parcels":
+                possession_pending,
+
+            "compensation_total_amount":
+                round(
+                    compensation_total,
+                    2,
+                ),
+
+            "compensation_assessed_amount":
+                round(
+                    compensation_assessed,
+                    2,
+                ),
+
+            "compensation_disbursed_amount":
+                round(
+                    compensation_disbursed,
+                    2,
+                ),
+
+            "compensation_pending_amount":
+                round(
+                    compensation_pending,
+                    2,
+                ),
+
+            "compensation_completion_pct":
+                round(
+                    percentage(
+                        compensation_disbursed,
+                        compensation_assessed,
+                    ),
+                    2,
+                ),
+
+            "compensation_pending_cases":
+                compensation_pending_cases,
+
+            "avg_compensation_delay_days":
+                round(
+                    avg_compensation_delay,
+                    2,
+                ),
+
+            "documents_required":
+                documents_required,
+
+            "documents_verified":
+                documents_verified,
+
+            "documents_pending":
+                documents_pending,
+
+            "documentation_completion_pct":
+                round(
+                    percentage(
+                        documents_verified,
+                        documents_required,
+                    ),
+                    2,
+                ),
+
+            "approvals_required":
+                approvals_required,
+
+            "approvals_completed":
+                approvals_completed,
+
+            "approvals_pending":
+                approvals_pending,
+
+            "approval_completion_pct":
+                round(
+                    percentage(
+                        approvals_completed,
+                        approvals_required,
+                    ),
+                    2,
+                ),
+
+            "avg_approval_delay_days":
+                round(
+                    avg_approval_delay,
+                    2,
+                ),
+
+            "overdue_approvals":
+                overdue_approvals,
+
+            "active_legal_disputes":
+                active_legal,
+
+            "resolved_legal_disputes":
+                max(
+                    0,
+                    int(
+                        active_legal
+                        * rng.uniform(
+                            0,
+                            0.4,
+                        )
+                    ),
+                ),
+
+            "ownership_disputes":
+                ownership_disputes,
+
+            "court_stay_cases":
+                court_stays,
+
+            "pending_objections":
+                pending_objections,
+
+            "families_requiring_rr":
+                families_requiring_rr,
+
+            "families_rr_completed":
+                families_rr_completed,
+
+            "rr_completion_pct":
+                round(
+                    percentage(
+                        families_rr_completed,
+                        families_requiring_rr,
+                    ),
+                    2,
+                ),
+
+            "rr_pending_cases":
+                rr_pending,
+
+            "pending_stakeholder_actions":
+                pending_actions,
+
+            "avg_stakeholder_response_days":
+                round(
+                    response_days,
+                    2,
+                ),
+
+            "stakeholder_responsiveness_score":
+                round(
+                    responsiveness,
+                    2,
+                ),
+
+            "interdepartmental_pending_actions":
+                interdepartmental_actions,
+
+            **history,
+        }
+
+        # ====================================================
+        # TARGET
+        # ====================================================
+
+        will_be_delayed, delay_days, delay_stage = (
+            calculate_target(
+                rng,
+                project,
+                state,
+            )
+        )
+
+        # ====================================================
+        # FINAL ROW
+        # ====================================================
 
         row = {
-            "project_id": project["project_id"],
-            "snapshot_date": snapshot_date.isoformat(),
-            "snapshot_day": day,
+            "project_id":
+                project["project_id"],
 
-            "project_type": project["project_type"],
-            "state": project["state"],
-            "district": project["district"],
-            "land_type": project["land_type"],
-            "priority": project["priority"],
+            "snapshot_date":
+                (
+                    project["start_date"]
+                    + timedelta(days=day)
+                ).isoformat(),
 
-            "land_area_hectares": project["land_area_hectares"],
-            "affected_families": project["affected_families"],
-            "complexity_score": project["complexity_score"],
+            "snapshot_day":
+                day,
+
+            "project_type":
+                project["project_type"],
+
+            "state":
+                project["state"],
+
+            "district":
+                project["district"],
+
+            "land_type":
+                project["land_type"],
+
+            "priority":
+                project["priority"],
+
+            "land_area_hectares":
+                project["land_area_hectares"],
+
+            "affected_families":
+                project["affected_families"],
+
+            "complexity_score":
+                project["complexity_score"],
 
             **state,
 
-            "will_be_delayed": will_be_delayed,
-            "additional_delay_days": delay_days,
-            "delay_stage": delay_stage,
+            "will_be_delayed":
+                will_be_delayed,
+
+            "additional_delay_days":
+                delay_days,
+
+            "delay_stage":
+                delay_stage,
         }
 
         rows.append(row)

@@ -6,17 +6,20 @@ from sklearn.metrics import (
     accuracy_score,
     classification_report,
     confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
 from xgboost import XGBClassifier
 
 
 DATA_PATH = "data/processed/test_dataset.parquet"
 MODEL_PATH = "models/baseline_model.json"
-
+FEATURE_NAMES_PATH = "models/feature_names.joblib"
 
 TARGET = "will_be_delayed"
-
 
 DROP_COLUMNS = [
     "project_id",
@@ -28,21 +31,27 @@ DROP_COLUMNS = [
 
 
 def main():
-    print("=" * 60)
+    print("=" * 70)
     print("SIH 26017 BASELINE MODEL")
-    print("=" * 60)
+    print("=" * 70)
 
     df = pd.read_parquet(DATA_PATH)
 
-    print(f"Dataset: {len(df):,} rows")
-    print(f"Features before encoding: {len(df.columns) - 1}")
+    groups = df["project_id"]
+
+    print(f"Dataset:              {len(df):,} rows")
+    print(f"Projects:             {df['project_id'].nunique():,}")
+    print(f"Delay rate:           {df[TARGET].mean() * 100:.2f}%")
+
+    # --------------------------------------------------------
+    # Prepare features
+    # --------------------------------------------------------
 
     X = df.drop(columns=DROP_COLUMNS)
     y = df[TARGET]
 
-    # Convert categorical columns into numerical codes.
     categorical_columns = X.select_dtypes(
-        include=["object"]
+        include=["object", "string"]
     ).columns
 
     X = pd.get_dummies(
@@ -53,17 +62,75 @@ def main():
 
     print(f"Features after encoding: {X.shape[1]}")
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
+    # --------------------------------------------------------
+    # Group-based train/test split
+    # --------------------------------------------------------
+
+    splitter = GroupShuffleSplit(
+        n_splits=1,
         test_size=0.20,
         random_state=42,
-        stratify=y,
     )
 
-    print(f"Training rows: {len(X_train):,}")
-    print(f"Testing rows:  {len(X_test):,}")
+    train_idx, test_idx = next(
+        splitter.split(
+            X,
+            y,
+            groups=groups,
+        )
+    )
+
+    train_projects = set(
+        groups.iloc[train_idx]
+    )
+
+    test_projects = set(
+        groups.iloc[test_idx]
+    )
+
     print()
+    print("DATA SPLIT")
+    print("-" * 70)
+
+    print(f"Training projects: {len(train_projects):,}")
+    print(f"Testing projects:  {len(test_projects):,}")
+    print(
+        f"Project overlap:   "
+        f"{len(train_projects & test_projects):,}"
+    )
+
+    X_train = X.iloc[train_idx]
+    X_test = X.iloc[test_idx]
+
+    y_train = y.iloc[train_idx]
+    y_test = y.iloc[test_idx]
+
+    print(f"Training rows:      {len(X_train):,}")
+    print(f"Testing rows:       {len(X_test):,}")
+
+    # --------------------------------------------------------
+    # Handle class imbalance
+    # --------------------------------------------------------
+
+    positive = y_train.sum()
+    negative = len(y_train) - positive
+
+    scale_pos_weight = negative / max(positive, 1)
+
+    print()
+    print("CLASS BALANCE")
+    print("-" * 70)
+
+    print(f"Delayed:            {positive:,}")
+    print(f"Not delayed:        {negative:,}")
+    print(
+        f"scale_pos_weight:   "
+        f"{scale_pos_weight:.3f}"
+    )
+
+    # --------------------------------------------------------
+    # Train XGBoost
+    # --------------------------------------------------------
 
     model = XGBClassifier(
         n_estimators=500,
@@ -75,43 +142,99 @@ def main():
         eval_metric="logloss",
         tree_method="hist",
         device="cuda",
+        scale_pos_weight=scale_pos_weight,
         random_state=42,
     )
 
-    print("Training XGBoost on GPU...")
+    print()
+    print("TRAINING")
+    print("-" * 70)
+    print("Training XGBoost...")
 
     model.fit(
         X_train,
         y_train,
-        eval_set=[(X_test, y_test)],
+        eval_set=[
+            (X_test, y_test)
+        ],
         verbose=False,
     )
 
-    predictions = model.predict(X_test)
+    # --------------------------------------------------------
+    # Predictions
+    # --------------------------------------------------------
+
+    probabilities = model.predict_proba(
+        X_test
+    )[:, 1]
+
+    predictions = (
+        probabilities >= 0.50
+    ).astype(int)
+
+    # --------------------------------------------------------
+    # Metrics
+    # --------------------------------------------------------
 
     accuracy = accuracy_score(
         y_test,
         predictions,
     )
 
-    print()
-    print("=" * 60)
-    print("RESULTS")
-    print("=" * 60)
+    precision = precision_score(
+        y_test,
+        predictions,
+        zero_division=0,
+    )
 
-    print(f"Accuracy: {accuracy * 100:.2f}%")
-    print()
+    recall = recall_score(
+        y_test,
+        predictions,
+        zero_division=0,
+    )
 
-    print("Classification report:")
+    f1 = f1_score(
+        y_test,
+        predictions,
+        zero_division=0,
+    )
+
+    auc = roc_auc_score(
+        y_test,
+        probabilities,
+    )
+
+    # --------------------------------------------------------
+    # Results
+    # --------------------------------------------------------
+
+    print()
+    print("=" * 70)
+    print("MODEL RESULTS")
+    print("=" * 70)
+
+    print(f"Accuracy:            {accuracy * 100:.2f}%")
+    print(f"Precision:           {precision * 100:.2f}%")
+    print(f"Recall:              {recall * 100:.2f}%")
+    print(f"F1 Score:            {f1 * 100:.2f}%")
+    print(f"ROC-AUC:             {auc:.4f}")
+
+    print()
+    print("CLASSIFICATION REPORT")
+    print("-" * 70)
+
     print(
         classification_report(
             y_test,
             predictions,
             digits=4,
+            zero_division=0,
         )
     )
 
-    print("Confusion matrix:")
+    print("CONFUSION MATRIX")
+    print("-" * 70)
+
     print(
         confusion_matrix(
             y_test,
@@ -119,21 +242,36 @@ def main():
         )
     )
 
+    # --------------------------------------------------------
+    # Save model
+    # --------------------------------------------------------
+
     Path("models").mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    model.save_model(MODEL_PATH)
+    model.save_model(
+        MODEL_PATH
+    )
 
-    # Save feature names separately.
     joblib.dump(
         list(X.columns),
-        "models/feature_names.joblib",
+        FEATURE_NAMES_PATH,
     )
 
     print()
-    print(f"Model saved to: {MODEL_PATH}")
+    print("=" * 70)
+    print("MODEL SAVED")
+    print("=" * 70)
+
+    print(
+        f"Model:    {MODEL_PATH}"
+    )
+
+    print(
+        f"Features: {FEATURE_NAMES_PATH}"
+    )
 
 
 if __name__ == "__main__":

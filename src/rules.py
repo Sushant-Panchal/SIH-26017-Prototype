@@ -71,6 +71,17 @@ COMPLEXITY_MAX = 100.0
 
 
 # ============================================================
+# Historical context
+# ============================================================
+
+HISTORICAL_DELAY_RATE_MIN = 0.05
+HISTORICAL_DELAY_RATE_MAX = 0.65
+
+HISTORICAL_AVG_DELAY_MIN = 5.0
+HISTORICAL_AVG_DELAY_MAX = 180.0
+
+
+# ============================================================
 # Stage durations
 #
 # These are baseline durations.
