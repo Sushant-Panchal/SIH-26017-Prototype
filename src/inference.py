@@ -55,6 +55,8 @@ class DelayPredictor:
         columns_to_drop = [
             "project_id",
             "snapshot_date",
+            "state",
+            "district",
             "will_be_delayed",
             "additional_delay_days",
             "delay_stage",
