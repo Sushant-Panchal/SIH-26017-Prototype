@@ -343,6 +343,9 @@ class DelayPredictor:
         if pd.isna(value):
             return None
 
+        if hasattr(value, "item"):
+            value = value.item()
+
         if isinstance(value, float):
             if value.is_integer():
                 return int(value)
@@ -350,7 +353,7 @@ class DelayPredictor:
             return round(value, 2)
 
         if isinstance(value, int):
-            return value
+            return int(value)
 
         return value
 
