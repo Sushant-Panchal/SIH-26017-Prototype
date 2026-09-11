@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import cupy as cp
 import joblib
 import pandas as pd
 from sklearn.metrics import (
@@ -101,11 +101,33 @@ def main():
         f"{len(train_projects & test_projects):,}"
     )
 
-    X_train = X.iloc[train_idx]
-    X_test = X.iloc[test_idx]
+    X_train = cp.asarray(
+        X.iloc[train_idx].to_numpy(
+            dtype="float32",
+            copy=True,
+        )
+    )
 
-    y_train = y.iloc[train_idx]
-    y_test = y.iloc[test_idx]
+    X_test = cp.asarray(
+        X.iloc[test_idx].to_numpy(
+            dtype="float32",
+            copy=True,
+        )
+    )
+
+    y_train = cp.asarray(
+        y.iloc[train_idx].to_numpy(
+            dtype="float32",
+            copy=True,
+        )
+    )
+
+    y_test = cp.asarray(
+        y.iloc[test_idx].to_numpy(
+            dtype="float32",
+            copy=True,
+        )
+    )
 
     print(f"Training rows:      {len(X_train):,}")
     print(f"Testing rows:       {len(X_test):,}")
@@ -114,7 +136,7 @@ def main():
     # Handle class imbalance
     # --------------------------------------------------------
 
-    positive = y_train.sum()
+    positive = int(y_train.sum().item())
     negative = len(y_train) - positive
 
     scale_pos_weight = negative / max(positive, 1)
@@ -174,36 +196,41 @@ def main():
         probabilities >= 0.50
     ).astype(int)
 
+    # Move results to CPU for scikit-learn metrics.
+    y_test_numpy = y_test.get()
+    probabilities_numpy = probabilities
+    predictions_numpy = predictions
+
     # --------------------------------------------------------
     # Metrics
     # --------------------------------------------------------
 
     accuracy = accuracy_score(
-        y_test,
-        predictions,
+        y_test_numpy,
+        predictions_numpy,
     )
 
     precision = precision_score(
-        y_test,
-        predictions,
+        y_test_numpy,
+        predictions_numpy,
         zero_division=0,
     )
 
     recall = recall_score(
-        y_test,
-        predictions,
+        y_test_numpy,
+        predictions_numpy,
         zero_division=0,
     )
 
     f1 = f1_score(
-        y_test,
-        predictions,
+        y_test_numpy,
+        predictions_numpy,
         zero_division=0,
     )
 
     auc = roc_auc_score(
-        y_test,
-        probabilities,
+        y_test_numpy,
+        probabilities_numpy,
     )
 
     # --------------------------------------------------------
@@ -227,8 +254,8 @@ def main():
 
     print(
         classification_report(
-            y_test,
-            predictions,
+            y_test_numpy,
+            predictions_numpy,
             digits=4,
             zero_division=0,
         )
@@ -239,8 +266,8 @@ def main():
 
     print(
         confusion_matrix(
-            y_test,
-            predictions,
+            y_test_numpy,
+            predictions_numpy,
         )
     )
 

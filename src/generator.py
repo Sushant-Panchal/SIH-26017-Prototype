@@ -643,7 +643,6 @@ def generate_project_snapshots(
 
     rows = []
 
-    project_target: tuple[int, float, str] | None = None
 
     for day in days:
 
@@ -1325,14 +1324,11 @@ def generate_project_snapshots(
         # TARGET
         # ====================================================
 
-        if project_target is None:
-            project_target = calculate_target(
-                rng,
-                project,
-                state,
-            )
-
-        will_be_delayed, delay_days, delay_stage = project_target
+        will_be_delayed, delay_days, delay_stage = calculate_target(
+            rng,
+            project,
+            state,
+        )
 
         # ====================================================
         # FINAL ROW
