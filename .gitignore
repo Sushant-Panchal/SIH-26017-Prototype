@@ -1,5 +1,30 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
-data/processed/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
 .vscode/
+.idea/
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+
+# Training datasets
+data/processed/*.parquet
+
+# Generated reports
+reports/
+
+# Environment variables
+.env
+
+# OS
+.DS_Store
+Thumbs.db

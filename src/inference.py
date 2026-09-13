@@ -6,9 +6,19 @@ import xgboost as xgb
 from xgboost import XGBClassifier
 
 
-MODEL_PATH = "models/baseline_model.json"
-FEATURE_NAMES_PATH = "models/feature_names.joblib"
-DATASET_PATH = "data/processed/test_dataset.parquet"
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+MODEL_PATH = str(
+    BASE_DIR / "models" / "baseline_model.json"
+)
+
+FEATURE_NAMES_PATH = str(
+    BASE_DIR / "models" / "feature_names.joblib"
+)
+
+DATASET_PATH = str(
+    BASE_DIR / "data" / "processed" / "test_dataset.parquet"
+)
 
 
 class DelayPredictor:
