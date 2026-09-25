@@ -970,15 +970,28 @@ function renderResults(container, result) {
 
 function showPredictionError(container, message) {
   const driversContainer = container.querySelector('#riskIncreasingContainer');
+  const safeMessage = message && !message.includes('uvicorn') 
+    ? message 
+    : 'Prediction service is temporarily unavailable. Please try again.';
+
   if (driversContainer) {
     driversContainer.innerHTML = `
-      <div class="p-space-sm rounded bg-error-container/40 border border-error text-on-surface flex flex-col gap-1">
-        <div class="flex items-center gap-1 text-error font-bold text-label-sm">
+      <div class="p-space-sm rounded bg-error-container/40 border border-error text-on-surface flex flex-col gap-2">
+        <div class="flex items-center gap-1.5 text-error font-bold text-label-sm">
           <span class="material-symbols-outlined text-[16px]">error</span>
-          <span>Inference Error</span>
+          <span>Inference Unavailable</span>
         </div>
-        <span class="text-body-sm text-xs">${message}</span>
+        <span class="font-body-sm text-xs text-on-surface">${safeMessage}</span>
+        <button class="mt-1 self-start px-2.5 py-1 bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-sm text-xs font-semibold rounded border border-outline-variant/40 shadow-sm flex items-center gap-1 transition-colors" id="retryPredictionBtn" type="button">
+          <span class="material-symbols-outlined text-[14px]">refresh</span>
+          <span>Retry Assessment</span>
+        </button>
       </div>
     `;
+
+    const retryBtn = driversContainer.querySelector('#retryPredictionBtn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => triggerAssessment(container));
+    }
   }
 }

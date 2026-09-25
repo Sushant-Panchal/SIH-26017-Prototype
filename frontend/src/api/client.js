@@ -66,9 +66,10 @@ async function request(endpoint, options = {}) {
       throw new ApiError('Request timed out while contacting Bhoomi Sakha prediction engine.', 408);
     }
 
-    // Network error (e.g. backend server is stopped)
+    // Network error (e.g. backend server is stopped or unreachable)
+    console.debug(`[ApiClient] Network request failed for ${endpoint}:`, error);
     throw new ApiError(
-      `Cannot connect to prediction engine at ${API_BASE_URL}. Ensure the backend is running with "python -m uvicorn src.api:app --reload".`,
+      'Prediction service is temporarily unavailable. Please try again.',
       0,
       error
     );

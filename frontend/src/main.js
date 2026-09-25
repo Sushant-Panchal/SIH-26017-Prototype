@@ -147,11 +147,32 @@ class BhoomiSakhaApp {
   }
 
   async checkBackendHealth(showToast = false) {
-    const res = await predictionService.checkHealth();
     const dot = document.getElementById('backendStatusDot');
     const text = document.getElementById('backendStatusText');
 
-    if (res.online) {
+    if (dot) {
+      dot.innerHTML = `<span class="animate-pulse relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>`;
+    }
+    if (text && !this.isBackendOnline) {
+      text.textContent = 'Backend: Connecting...';
+      text.className = 'font-label-sm text-label-sm text-on-surface-variant font-tabular-data';
+    }
+
+    const res = await predictionService.checkHealth();
+
+    if (res.online && res.modelLoaded) {
+      let engineLabel = 'FastAPI Connected • XGBoost Engine Active';
+      try {
+        if (!this.cachedMetadata) {
+          this.cachedMetadata = await predictionService.getMetadata();
+        }
+        if (this.cachedMetadata?.model?.version) {
+          engineLabel = `FastAPI Connected • XGBoost Engine v${this.cachedMetadata.model.version} Active`;
+        }
+      } catch (e) {
+        // Fallback to standard active label
+      }
+
       if (dot) {
         dot.innerHTML = `
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -159,25 +180,25 @@ class BhoomiSakhaApp {
         `;
       }
       if (text) {
-        text.textContent = `Backend: FastAPI Connected • XGBoost Engine v2.4 Active`;
-        text.className = 'font-label-sm text-label-sm text-on-surface font-tabular-data';
+        text.textContent = engineLabel;
+        text.className = 'font-label-sm text-label-sm text-on-surface font-tabular-data font-semibold';
       }
       if (!this.isBackendOnline && showToast) {
-        this.showToast('Backend connected: XGBoost binary classifier (76 features) loaded.', 'success');
+        this.showToast('Backend connected: XGBoost binary classifier loaded.', 'success');
       }
       this.isBackendOnline = true;
     } else {
       if (dot) {
         dot.innerHTML = `
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
         `;
       }
       if (text) {
-        text.textContent = `Backend Disconnected (127.0.0.1:8000) • Click to Retry`;
-        text.className = 'font-label-sm text-label-sm text-amber-800 font-tabular-data font-semibold';
+        text.textContent = 'Backend Unavailable • Click to Retry';
+        text.className = 'font-label-sm text-label-sm text-red-600 dark:text-red-400 font-tabular-data font-semibold';
       }
       if (this.isBackendOnline || showToast) {
-        this.showToast('FastAPI backend not responding on http://127.0.0.1:8000. Ensure "python -m uvicorn src.api:app --reload" is running.', 'warning');
+        this.showToast('Prediction service is temporarily unavailable. Please try again.', 'warning');
       }
       this.isBackendOnline = false;
     }

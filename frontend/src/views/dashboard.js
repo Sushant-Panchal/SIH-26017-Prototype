@@ -141,7 +141,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                     <span class="font-body-sm text-body-sm text-on-surface-variant">National Portfolio breakdown (N=142)</span>
                   </div>
                   <span class="font-tabular-data font-label-sm text-label-sm px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-semibold">
-                    Live Model v2.4
+                    Live Model Active
                   </span>
                 </div>
 
