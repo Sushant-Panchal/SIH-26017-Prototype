@@ -11,6 +11,8 @@ import {
   getRiskBadgeClasses,
   getRiskTextColor,
 } from '../utils/risk.js';
+import { createReadAloudButton } from '../utils/tts.js';
+import { i18n } from '../i18n/index.js';
 
 export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavigateToAssessment) {
   const project = SAMPLE_PROJECTS.find(p => p.id === projectId) || SAMPLE_PROJECTS[0];
@@ -85,11 +87,12 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
 
           <!-- Action Panel Buttons -->
           <div class="flex flex-wrap items-center gap-space-sm w-full xl:w-auto shrink-0">
+            <div id="detailReadAloudSlot"></div>
             <button class="px-space-md py-2 bg-secondary-container hover:bg-secondary text-on-surface hover:text-on-secondary font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm font-bold" id="detailRerunBtn" type="button">
               <span class="material-symbols-outlined text-[18px]">bolt</span>
               <span>Re-run Assessment</span>
             </button>
-            <button class="px-space-md py-2 bg-primary hover:bg-surface-container-high text-on-primary hover:text-on-surface font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm" type="button">
+            <button class="px-space-md py-2 bg-primary hover:bg-surface-container-high text-on-primary hover:text-on-surface font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm" id="draftDcOrderBtn" type="button">
               <span class="material-symbols-outlined text-[18px]">history_edu</span>
               <span>Draft DC Order</span>
             </button>
@@ -257,6 +260,15 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
       </div>
     </div>
   `;
+
+  const readSlot = container.querySelector('#detailReadAloudSlot');
+  if (readSlot) {
+    const readBtn = createReadAloudButton(
+      () => `Project dossier for ${project.name}, Project ID ${project.id}. State: ${project.state}, District: ${project.district}. Current statutory stage: ${project.stage}. Progress is ${project.progressPct} percent. Predicted delay risk is ${project.delayProbability} percent, classified as ${riskLevel} risk tier. ${getRiskSummary(riskLevel)}`,
+      () => i18n.getLanguage()
+    );
+    readSlot.appendChild(readBtn);
+  }
 
   const rerunBtn = container.querySelector('#detailRerunBtn');
   if (rerunBtn && onNavigateToAssessment) {

@@ -16,6 +16,8 @@ import {
   getRiskTextColor,
   getRiskStrokeColor,
 } from '../utils/risk.js';
+import { createReadAloudButton } from '../utils/tts.js';
+import { i18n } from '../i18n/index.js';
 
 let currentAssessmentState = {
   activePreset: 'medium',
@@ -441,15 +443,18 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
             </div>
 
-            <!-- Top Row with State Badge -->
+            <!-- Top Row with State Badge & Read Aloud -->
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-space-xs">
                 <span class="material-symbols-outlined text-secondary text-[22px]">analytics</span>
                 <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Predictive Risk Index</h3>
               </div>
-              <span class="px-space-sm py-1 rounded font-label-sm text-label-sm font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 transition-all" id="riskBadge">
-                MEDIUM RISK
-              </span>
+              <div class="flex items-center gap-2">
+                <div id="assessmentReadAloudSlot"></div>
+                <span class="px-space-sm py-1 rounded font-label-sm text-label-sm font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 transition-all" id="riskBadge">
+                  MEDIUM RISK
+                </span>
+              </div>
             </div>
 
             <!-- Delay Probability Radial Visualization -->
@@ -566,6 +571,22 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
 function attachAssessmentEvents(container, initialData) {
   populateForm(initialData.values);
   calculateDocCompletion();
+
+  const readSlot = container.querySelector('#assessmentReadAloudSlot');
+  if (readSlot) {
+    readSlot.innerHTML = '';
+    const readBtn = createReadAloudButton(
+      () => {
+        const prob = container.querySelector('#probabilityValue')?.textContent || '0%';
+        const badge = container.querySelector('#riskBadge')?.textContent || 'Medium Risk';
+        const summary = container.querySelector('#riskSummaryText')?.textContent || '';
+        const threshold = container.querySelector('#riskThresholdNote')?.textContent || '';
+        return `Bhoomi Sakha assessment outcome. Delay probability: ${prob}. ${badge}. ${summary}. ${threshold}`;
+      },
+      () => i18n.getLanguage()
+    );
+    readSlot.appendChild(readBtn);
+  }
 
   // Presets buttons
   container.querySelectorAll('.preset-pill').forEach(btn => {

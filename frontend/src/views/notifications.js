@@ -4,6 +4,8 @@
  */
 
 import { notificationStore } from '../utils/notifications.js';
+import { tts } from '../utils/tts.js';
+import { i18n } from '../i18n/index.js';
 
 export function renderNotificationsView(container, onStateChange) {
   let activeFilter = 'all'; // 'all' | 'unread'
@@ -115,6 +117,9 @@ export function renderNotificationsView(container, onStateChange) {
 
                 <!-- Card Actions -->
                 <div class="flex items-center gap-2 shrink-0 self-end md:self-center pl-6 md:pl-0">
+                  <button class="notif-read-btn p-1.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" data-id="${n.id}" aria-label="Read notification aloud" title="Read aloud" type="button">
+                    <span class="material-symbols-outlined text-[18px]">volume_up</span>
+                  </button>
                   <a class="px-3 py-1.5 rounded font-label-sm text-xs font-semibold bg-primary text-on-primary hover:bg-surface-tint transition-colors flex items-center gap-1" href="${n.actionRoute}">
                     <span>${n.actionLabel}</span>
                     <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
@@ -167,6 +172,24 @@ export function renderNotificationsView(container, onStateChange) {
         render();
       });
     }
+
+    container.querySelectorAll('.notif-read-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const notif = notificationStore.getAll().find(n => n.id === id);
+        if (notif) {
+          const icon = btn.querySelector('.material-symbols-outlined');
+          tts.speak(
+            `${notif.category} alert. ${notif.title}. ${notif.summary}`,
+            i18n.getLanguage(),
+            (state) => {
+              if (icon) icon.textContent = state === 'speaking' ? 'pause' : 'volume_up';
+            }
+          );
+        }
+      });
+    });
 
     container.querySelectorAll('.toggle-read-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {

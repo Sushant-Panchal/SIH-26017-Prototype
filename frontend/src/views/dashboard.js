@@ -9,6 +9,9 @@ import {
   getRiskBadgeClasses,
   getRiskTextColor,
 } from '../utils/risk.js';
+import { createReadAloudButton } from '../utils/tts.js';
+import { attachMicToInput } from '../utils/stt.js';
+import { i18n } from '../i18n/index.js';
 
 export function renderDashboardView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -262,12 +265,15 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               </div>
 
               <!-- AI Predictive Triangulation Alert -->
-              <div class="bg-primary-container text-on-primary rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs relative overflow-hidden">
-                <div class="flex items-center gap-space-xs text-secondary-container">
-                  <span class="material-symbols-outlined text-[20px]">psychology</span>
-                  <span class="font-label-md text-label-md font-bold uppercase tracking-wider">Predictive Triangulation Alert</span>
+              <div class="bg-primary-container text-on-primary rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs relative overflow-hidden" id="triangulationAlertCard">
+                <div class="flex items-center justify-between text-secondary-container">
+                  <div class="flex items-center gap-space-xs">
+                    <span class="material-symbols-outlined text-[20px]">psychology</span>
+                    <span class="font-label-md text-label-md font-bold uppercase tracking-wider">Predictive Triangulation Alert</span>
+                  </div>
+                  <div id="alertReadAloudSlot"></div>
                 </div>
-                <p class="font-body-md text-body-md text-on-primary/90">
+                <p class="font-body-md text-body-md text-on-primary/90" id="triangulationAlertText">
                   Corridors passing through industrial agro-zones face an 82% likelihood of Section 15 objection escalation within 14 days without active district tehsildar hearings.
                 </p>
                 <div class="pt-space-xs flex items-center justify-between">
@@ -294,9 +300,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                   </div>
                   <!-- Quick Table Filters -->
                   <div class="flex items-center gap-space-xs">
-                    <div class="relative">
-                      <input class="pl-7 pr-space-sm py-1 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface w-44 border border-outline-variant/40" id="projectSearchInput" placeholder="Search project or ID..." type="text"/>
-                      <span class="material-symbols-outlined absolute left-1.5 top-1.5 text-[16px] text-on-surface-variant">search</span>
+                    <div class="relative flex items-center">
+                      <input class="pl-7 pr-8 py-1 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface w-48 border border-outline-variant/40" id="projectSearchInput" placeholder="Search project or ID..." type="text"/>
+                      <span class="material-symbols-outlined absolute left-1.5 top-1.5 text-[16px] text-on-surface-variant pointer-events-none">search</span>
+                      <div class="absolute right-1 top-0.5" id="dashboardSearchMicSlot"></div>
                     </div>
                   </div>
                 </div>
@@ -346,6 +353,23 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
       tbody.innerHTML = renderProjectRows(filtered);
       attachRowEvents(container, onNavigateToAssessment, onNavigateToAudit);
     });
+
+    const micSlot = container.querySelector('#dashboardSearchMicSlot');
+    if (micSlot) {
+      const micBtn = attachMicToInput(searchInput, () => i18n.getLanguage());
+      if (micBtn) micSlot.appendChild(micBtn);
+    }
+  }
+
+  // Attach Read Aloud to Triangulation Alert
+  const alertSlot = container.querySelector('#alertReadAloudSlot');
+  const alertText = container.querySelector('#triangulationAlertText');
+  if (alertSlot && alertText) {
+    const readBtn = createReadAloudButton(
+      () => `Predictive Triangulation Alert: ${alertText.textContent.trim()}`,
+      () => i18n.getLanguage()
+    );
+    alertSlot.appendChild(readBtn);
   }
 
   // Action button clicks

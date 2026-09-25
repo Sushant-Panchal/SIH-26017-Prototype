@@ -9,6 +9,8 @@ import {
   getRiskBadgeClasses,
   getRiskTextColor,
 } from '../utils/risk.js';
+import { attachMicToInput } from '../utils/stt.js';
+import { i18n } from '../i18n/index.js';
 
 export function renderProjectsView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -55,9 +57,10 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
           </div>
         </div>
 
-        <div class="relative w-full sm:w-64">
-          <input class="w-full pl-8 pr-3 py-1.5 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="directorySearchInput" placeholder="Filter by name, ID, or district..." type="text"/>
-          <span class="material-symbols-outlined absolute left-2 top-2 text-[16px] text-on-surface-variant">search</span>
+        <div class="relative w-full sm:w-64 flex items-center">
+          <input class="w-full pl-8 pr-8 py-1.5 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="directorySearchInput" placeholder="Filter by name, ID, or district..." type="text"/>
+          <span class="material-symbols-outlined absolute left-2 top-2 text-[16px] text-on-surface-variant pointer-events-none">search</span>
+          <div class="absolute right-1 top-0.5" id="directorySearchMicSlot"></div>
         </div>
       </div>
 
@@ -90,6 +93,12 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
   const searchInput = container.querySelector('#directorySearchInput');
   const filterSector = container.querySelector('#filterSector');
   const filterRisk = container.querySelector('#filterRisk');
+
+  const micSlot = container.querySelector('#directorySearchMicSlot');
+  if (micSlot && searchInput) {
+    const micBtn = attachMicToInput(searchInput, () => i18n.getLanguage());
+    if (micBtn) micSlot.appendChild(micBtn);
+  }
 
   const updateTable = () => {
     const q = (searchInput?.value || '').toLowerCase().trim();
