@@ -7,7 +7,9 @@ import { renderDashboardView } from './views/dashboard.js';
 import { renderAssessmentView } from './views/assessment.js';
 import { renderProjectsView } from './views/projects.js';
 import { renderDetailView } from './views/detail.js';
+import { renderNotificationsView } from './views/notifications.js';
 import { predictionService } from './api/prediction.js';
+import { notificationStore } from './utils/notifications.js';
 
 class BhoomiSakhaApp {
   constructor() {
@@ -21,6 +23,7 @@ class BhoomiSakhaApp {
   init() {
     this.setupNavigation();
     this.setupClock();
+    this.setupNotificationBell();
     this.startHealthPolling();
     this.handleRouting();
 
@@ -36,6 +39,35 @@ class BhoomiSakhaApp {
     const backendPill = document.getElementById('backendStatusPill');
     if (backendPill) {
       backendPill.addEventListener('click', () => this.checkBackendHealth(true));
+    }
+  }
+
+  setupNotificationBell() {
+    const bellBtn = document.getElementById('notifBellBtn');
+    if (bellBtn) {
+      bellBtn.addEventListener('click', () => {
+        window.location.hash = '#/notifications';
+      });
+    }
+    this.updateNotificationBadge();
+    notificationStore.subscribe(() => this.updateNotificationBadge());
+  }
+
+  updateNotificationBadge() {
+    const count = notificationStore.getUnreadCount();
+    const badge = document.getElementById('notifBellBadge');
+    const bellBtn = document.getElementById('notifBellBtn');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 9 ? '9+' : count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.textContent = '';
+        badge.classList.add('hidden');
+      }
+    }
+    if (bellBtn) {
+      bellBtn.setAttribute('title', count > 0 ? `${count} Unread System Notifications` : 'No Unread Notifications');
     }
   }
 
@@ -71,6 +103,7 @@ class BhoomiSakhaApp {
       assessment: 'Predictive Delay-Risk Assessment Cockpit',
       projects: 'National Land Acquisition Projects Directory',
       audit: 'Cadastral & Risk Detailed Dossier',
+      notifications: 'System Notifications & Operational Alerts',
     };
     const breadcrumbLabel = document.getElementById('currentViewName');
     if (breadcrumbLabel) {
@@ -89,6 +122,10 @@ class BhoomiSakhaApp {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     switch (this.currentView) {
+      case 'notifications':
+        renderNotificationsView(this.container, () => this.updateNotificationBadge());
+        break;
+
       case 'assessment':
         const preset = params.get('preset') || 'medium';
         renderAssessmentView(this.container, preset);
