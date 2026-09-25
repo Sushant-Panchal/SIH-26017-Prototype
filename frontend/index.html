@@ -253,6 +253,29 @@
           </div>
         </div>
 
+        <!-- Language Selector Control -->
+        <div class="relative" id="langControlContainer">
+          <button class="flex items-center gap-1 px-2 py-1 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded border border-outline-variant/40" id="langToggleBtn" type="button" aria-label="Select application language" aria-haspopup="true" aria-expanded="false" title="Language">
+            <span class="material-symbols-outlined text-[18px]">translate</span>
+            <span class="font-label-sm text-xs font-semibold uppercase" id="langCurrentLabel">EN</span>
+            <span class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+          </button>
+          <div class="hidden absolute right-0 mt-1 w-36 bg-surface-container-lowest border border-outline-variant/40 rounded-lg shadow-lg py-1 z-50 flex flex-col text-on-surface font-label-sm text-xs" id="langMenu" role="menu">
+            <button class="lang-option-btn px-3 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors text-left w-full" data-lang="en" role="menuitem" type="button">
+              <span>English</span>
+              <span class="material-symbols-outlined text-[14px] text-primary hidden check-icon">check</span>
+            </button>
+            <button class="lang-option-btn px-3 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors text-left w-full" data-lang="hi" role="menuitem" type="button">
+              <span>हिंदी (Hindi)</span>
+              <span class="material-symbols-outlined text-[14px] text-primary hidden check-icon">check</span>
+            </button>
+            <button class="lang-option-btn px-3 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors text-left w-full" data-lang="mr" role="menuitem" type="button">
+              <span>मराठी (Marathi)</span>
+              <span class="material-symbols-outlined text-[14px] text-primary hidden check-icon">check</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Notification Trigger -->
         <button class="relative p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded" type="button" id="notifBellBtn" aria-label="Open notifications" title="System Notifications">
           <span class="material-symbols-outlined text-[20px]">notifications</span>

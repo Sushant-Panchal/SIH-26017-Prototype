@@ -11,6 +11,7 @@ import { renderNotificationsView } from './views/notifications.js';
 import { predictionService } from './api/prediction.js';
 import { notificationStore } from './utils/notifications.js';
 import { themeManager } from './utils/theme.js';
+import { i18n, t } from './i18n/index.js';
 
 class BhoomiSakhaApp {
   constructor() {
@@ -24,7 +25,9 @@ class BhoomiSakhaApp {
   init() {
     themeManager.init();
     this.setupThemeToggle();
+    this.setupLanguageToggle();
     this.setupNavigation();
+    this.updateLanguageUI();
     this.setupClock();
     this.setupNotificationBell();
     this.startHealthPolling();
@@ -144,6 +147,90 @@ class BhoomiSakhaApp {
     }
   }
 
+  setupLanguageToggle() {
+    const toggleBtn = document.getElementById('langToggleBtn');
+    const menu = document.getElementById('langMenu');
+    const currentLabel = document.getElementById('langCurrentLabel');
+    const optionBtns = document.querySelectorAll('.lang-option-btn');
+
+    const updateUI = (lang) => {
+      if (currentLabel) {
+        currentLabel.textContent = lang.toUpperCase();
+      }
+      optionBtns.forEach(btn => {
+        const itemLang = btn.getAttribute('data-lang');
+        const check = btn.querySelector('.check-icon');
+        if (itemLang === lang) {
+          btn.classList.add('bg-surface-container', 'font-semibold');
+          if (check) check.classList.remove('hidden');
+        } else {
+          btn.classList.remove('bg-surface-container', 'font-semibold');
+          if (check) check.classList.add('hidden');
+        }
+      });
+      this.updateLanguageUI();
+    };
+
+    updateUI(i18n.getLanguage());
+    i18n.subscribe((lang) => {
+      updateUI(lang);
+      this.handleRouting();
+    });
+
+    if (toggleBtn && menu) {
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !menu.classList.contains('hidden');
+        if (isOpen) {
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          menu.classList.remove('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      optionBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const selected = btn.getAttribute('data-lang');
+          i18n.setLanguage(selected);
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!toggleBtn.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.focus();
+        }
+      });
+    }
+  }
+
+  updateLanguageUI() {
+    const navTabs = document.querySelectorAll('.nav-tab');
+    navTabs.forEach(tab => {
+      const target = tab.getAttribute('data-target');
+      if (target) {
+        tab.textContent = t(`nav.${target}`, tab.textContent);
+      }
+    });
+
+    const breadcrumbLabel = document.getElementById('currentViewName');
+    if (breadcrumbLabel && this.currentView) {
+      breadcrumbLabel.textContent = t(`views.${this.currentView}`, breadcrumbLabel.textContent);
+    }
+  }
+
   setupNavigation() {
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(tab => {
@@ -171,16 +258,9 @@ class BhoomiSakhaApp {
       }
     });
 
-    const viewNameMap = {
-      dashboard: 'National Cadastral Matrix (Overview)',
-      assessment: 'Predictive Delay-Risk Assessment Cockpit',
-      projects: 'National Land Acquisition Projects Directory',
-      audit: 'Cadastral & Risk Detailed Dossier',
-      notifications: 'System Notifications & Operational Alerts',
-    };
     const breadcrumbLabel = document.getElementById('currentViewName');
     if (breadcrumbLabel) {
-      breadcrumbLabel.textContent = viewNameMap[target] || 'Executive Command Center';
+      breadcrumbLabel.textContent = t(`views.${target}`, 'Executive Command Center');
     }
   }
 
