@@ -3,7 +3,7 @@
  * Stitch Project Risk Analysis & Cadastral Audit Detail
  */
 
-import { SAMPLE_PROJECTS } from '../data/presets.js';
+import { SAMPLE_PROJECTS, SCENARIO_PRESETS } from '../data/presets.js';
 import {
   getRiskLevel,
   getRiskWording,
@@ -275,10 +275,195 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
     rerunBtn.addEventListener('click', () => onNavigateToAssessment(project.presetKey || 'medium'));
   }
 
+  const draftDcBtn = container.querySelector('#draftDcOrderBtn');
+  if (draftDcBtn) {
+    draftDcBtn.addEventListener('click', () => {
+      openDraftDcOrderModal(project, riskLevel);
+    });
+  }
+
   const breadcrumb = container.querySelector('#backToProjectsBreadcrumb');
   if (breadcrumb) {
     breadcrumb.addEventListener('click', () => {
       window.location.hash = '#/projects';
     });
   }
+}
+
+/**
+ * Open Prototype Draft DC Order Modal
+ * Clearly labels the document as a simulated prototype and not an official legal order.
+ */
+function openDraftDcOrderModal(project, riskLevel) {
+  const preset = SCENARIO_PRESETS[project.presetKey] || SCENARIO_PRESETS.medium;
+  const values = preset.values || {};
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const memoId = `BS-CALA/${project.id}/${new Date().getFullYear()}/PR-DRAFT`;
+
+  const existing = document.getElementById('draftDcOrderModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'draftDcOrderModal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'draftOrderModalTitle');
+
+  const draftText = `PROTOTYPE DRAFT ORDER - FOR GOVERNANCE DEMONSTRATION ONLY
+NOT AN OFFICIAL STATUTORY GOVERNMENT ORDER
+
+OFFICE OF THE DISTRICT COLLECTOR & COMPETENT AUTHORITY (LAND ACQUISITION)
+${project.district.toUpperCase()} DISTRICT, ${project.state.toUpperCase()}
+
+Memo Ref: ${memoId}
+Date: ${today}
+
+SUB: Pre-emptive Administrative Acceleration Directive under RFCTLARR Framework
+REF: Project ID: ${project.id} | Name: ${project.name} (${project.sector})
+     Current Statutory Stage: ${project.stage} | Current Physical Progress: ${project.progressPct}%
+
+1. TELEMETRY & PREDICTIVE AUDIT FINDINGS:
+   - Total Target Land Area: ${values.land_area_hectares || 100} Hectares
+   - Total Affected Families: ${values.affected_families || 120} Families
+   - Total Cadastral Parcels: ${values.total_parcels || 200}
+   - Model Delay Risk Probability: ${project.delayProbability}% (${riskLevel} Risk Tier)
+   - Statutory Impact: ${getRiskSummary(riskLevel)}
+
+2. ADMINISTRATIVE DIRECTIVES TO COMPETENT AUTHORITIES (CALA):
+   a) Joint Site Inspection: The Special Land Acquisition Officer (SLAO) and Sub-Divisional Magistrate (SDM) shall initiate immediate expedited joint site inspection for remaining pending parcels (${values.parcels_pending || 'N/A'}).
+   b) DBT Escrow Acceleration: Direct Benefit Transfer (DBT) reconciliation and compensation award payouts shall be expedited within a 14-day statutory timeline to prevent critical milestone slippage.
+   c) Lok Adalat Conciliation: Outstanding objections and title verification issues must be scheduled for expedited hearing during the upcoming weekly revenue Lok Adalat.
+
+DISCLAIMER:
+This document is a prototype draft generated automatically for governance simulation and review by the Bhoomi Sakha Early Delay Warning System. It does NOT constitute an official legal or statutory order unless vetted, approved, and officially signed by the District Collector and gazetted under the relevant state and central legislation.`;
+
+  modal.innerHTML = `
+    <div class="relative w-full max-w-3xl bg-surface-container-lowest text-on-surface rounded-xl shadow-2xl border border-outline-variant/40 overflow-hidden my-8 max-h-[90vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="p-space-lg bg-surface-container-low border-b border-outline-variant/30 flex items-start justify-between gap-space-md shrink-0">
+        <div>
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 uppercase tracking-wider">
+              Prototype Draft
+            </span>
+            <span class="text-xs text-on-surface-variant font-medium">Simulation Mode • Not Legally Enforceable</span>
+          </div>
+          <h3 id="draftOrderModalTitle" class="font-headline-sm text-headline-sm font-bold text-on-surface">
+            Draft DC Order / Administrative Directive
+          </h3>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">
+            Pre-populated prototype administrative memo based on real-time project risk telemetry.
+          </p>
+        </div>
+        <button id="closeDraftModalBtn" type="button" class="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors focus:ring-2 focus:ring-primary" aria-label="Close modal">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body (Printable Paper Look) -->
+      <div class="p-space-lg overflow-y-auto space-y-space-md text-sm font-body">
+        
+        <!-- Official Watermark / Header Box -->
+        <div class="p-4 rounded-lg bg-surface-container-low/70 border border-outline-variant/20 flex flex-col items-center text-center">
+          <span class="material-symbols-outlined text-3xl text-primary mb-1">account_balance</span>
+          <div class="font-bold text-base tracking-wide uppercase">Office of the District Collector & District Magistrate</div>
+          <div class="text-xs text-on-surface-variant uppercase font-semibold">Competent Authority Land Acquisition (CALA) • ${project.district}, ${project.state}</div>
+          <div class="text-xs font-tabular-data text-on-surface-variant mt-1">Ref: <span class="font-semibold text-on-surface">${memoId}</span> • Date: <span class="font-semibold text-on-surface">${today}</span></div>
+        </div>
+
+        <!-- Telemetry Summary Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div class="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
+            <span class="text-on-surface-variant block uppercase font-medium">Project ID</span>
+            <span class="font-bold font-tabular-data text-on-surface">${project.id}</span>
+          </div>
+          <div class="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
+            <span class="text-on-surface-variant block uppercase font-medium">Stage</span>
+            <span class="font-bold text-on-surface truncate block">${project.stage}</span>
+          </div>
+          <div class="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
+            <span class="text-on-surface-variant block uppercase font-medium">Area / Families</span>
+            <span class="font-bold font-tabular-data text-on-surface">${values.land_area_hectares || '—'} Ha / ${values.affected_families || '—'} Fam</span>
+          </div>
+          <div class="p-2.5 rounded ${riskLevel === 'CRITICAL' ? 'bg-red-500/10 border-red-500/30' : riskLevel === 'HIGH' ? 'bg-orange-500/10 border-orange-500/30' : 'bg-amber-500/10 border-amber-500/30'} border">
+            <span class="text-on-surface-variant block uppercase font-medium">Predicted Risk</span>
+            <span class="font-bold font-tabular-data ${getRiskTextColor(riskLevel)}">${project.delayProbability}% (${riskLevel})</span>
+          </div>
+        </div>
+
+        <!-- Draft Order Content -->
+        <div class="p-4 rounded-lg bg-surface-container-lowest border border-outline-variant/30 space-y-3 font-mono text-xs leading-relaxed text-on-surface/90 select-text whitespace-pre-wrap">${draftText}</div>
+
+        <!-- Warning Callout -->
+        <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-lg shrink-0 mt-0.5 text-amber-600 dark:text-amber-400">gavel</span>
+          <div>
+            <strong>Prototype Disclaimer:</strong> This draft memo is generated for governance evaluation within the Bhoomi Sakha prototype. It does not replace statutory procedures under the RFCTLARR Act 2013 or respective State Land Acquisition rules and carries no legal authority without official executive signature.
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-space-md bg-surface-container-low border-t border-outline-variant/30 flex items-center justify-between gap-space-sm shrink-0 flex-wrap">
+        <button id="copyDraftBtn" type="button" class="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-colors flex items-center gap-1.5 focus:ring-2 focus:ring-primary">
+          <span class="material-symbols-outlined text-[18px]">content_copy</span>
+          <span id="copyDraftLabel">Copy Draft Text</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <button id="printDraftBtn" type="button" class="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-colors flex items-center gap-1.5 focus:ring-2 focus:ring-primary">
+            <span class="material-symbols-outlined text-[18px]">print</span>
+            <span>Print / Save</span>
+          </button>
+          <button id="closeDraftModalFooterBtn" type="button" class="px-4 py-2 rounded-lg bg-primary hover:bg-surface-container-high text-on-primary hover:text-on-surface font-label-md text-label-md transition-colors focus:ring-2 focus:ring-primary font-medium">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const cleanup = () => {
+    document.removeEventListener('keydown', handleKeydown);
+    modal.remove();
+    const trigger = document.getElementById('draftDcOrderBtn');
+    if (trigger) trigger.focus();
+  };
+
+  const handleKeydown = (e) => {
+    if (e.key === 'Escape') {
+      cleanup();
+    }
+  };
+
+  document.addEventListener('keydown', handleKeydown);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) cleanup();
+  });
+
+  modal.querySelector('#closeDraftModalBtn')?.addEventListener('click', cleanup);
+  modal.querySelector('#closeDraftModalFooterBtn')?.addEventListener('click', cleanup);
+
+  modal.querySelector('#copyDraftBtn')?.addEventListener('click', () => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(draftText).then(() => {
+        const label = modal.querySelector('#copyDraftLabel');
+        if (label) {
+          label.textContent = 'Copied to Clipboard!';
+          setTimeout(() => { label.textContent = 'Copy Draft Text'; }, 2000);
+        }
+      }).catch(() => {
+        alert('Draft copied');
+      });
+    }
+  });
+
+  modal.querySelector('#printDraftBtn')?.addEventListener('click', () => {
+    window.print();
+  });
+
+  modal.querySelector('#closeDraftModalBtn')?.focus();
 }
