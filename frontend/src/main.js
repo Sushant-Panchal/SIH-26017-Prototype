@@ -27,6 +27,7 @@ class BhoomiSakhaApp {
     this.setupThemeToggle();
     this.setupLanguageToggle();
     this.setupNavigation();
+    this.setupMobileMenu();
     this.updateLanguageUI();
     this.setupClock();
     this.setupNotificationBell();
@@ -40,11 +41,23 @@ class BhoomiSakhaApp {
       brandBtn.addEventListener('click', () => {
         window.location.hash = '#/dashboard';
       });
+      brandBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          window.location.hash = '#/dashboard';
+        }
+      });
     }
 
     const backendPill = document.getElementById('backendStatusPill');
     if (backendPill) {
       backendPill.addEventListener('click', () => this.checkBackendHealth(true));
+      backendPill.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.checkBackendHealth(true);
+        }
+      });
     }
   }
 
@@ -216,12 +229,62 @@ class BhoomiSakhaApp {
     }
   }
 
+  setupMobileMenu() {
+    const toggleBtn = document.getElementById('mobileMenuToggleBtn');
+    const menu = document.getElementById('mobileNavigationMenu');
+    const icon = document.getElementById('mobileMenuIcon');
+
+    if (!toggleBtn || !menu) return;
+
+    const closeMenu = () => {
+      menu.classList.add('hidden');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      if (icon) icon.textContent = 'menu';
+    };
+
+    const openMenu = () => {
+      menu.classList.remove('hidden');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      if (icon) icon.textContent = 'close';
+    };
+
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isClosed = menu.classList.contains('hidden');
+      if (isClosed) {
+        openMenu();
+      } else {
+        closeMenu();
+      }
+    });
+
+    menu.querySelectorAll('.mobile-nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        closeMenu();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!toggleBtn.contains(e.target) && !menu.contains(e.target)) {
+        closeMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+        closeMenu();
+        toggleBtn.focus();
+      }
+    });
+  }
+
   updateLanguageUI() {
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(tab => {
       const target = tab.getAttribute('data-target');
       if (target) {
-        tab.textContent = t(`nav.${target}`, tab.textContent);
+        const textSpan = tab.querySelector('span:not(.material-symbols-outlined)') || tab;
+        textSpan.textContent = t(`nav.${target}`, textSpan.textContent);
       }
     });
 
@@ -234,13 +297,9 @@ class BhoomiSakhaApp {
   setupNavigation() {
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        navTabs.forEach(t => {
-          t.className = 'nav-tab px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded';
-          t.removeAttribute('aria-current');
-        });
-        tab.className = 'nav-tab px-space-md py-1.5 transition-colors bg-primary-container text-on-primary font-label-md rounded-lg shadow-sm font-semibold';
-        tab.setAttribute('aria-current', 'page');
+      tab.addEventListener('click', () => {
+        const target = tab.getAttribute('data-target');
+        if (target) this.updateNavState(target);
       });
     });
   }
@@ -249,12 +308,24 @@ class BhoomiSakhaApp {
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(t => {
       const isTarget = t.getAttribute('data-target') === target;
-      if (isTarget) {
-        t.className = 'nav-tab px-space-md py-1.5 transition-colors bg-primary-container text-on-primary font-label-md rounded-lg shadow-sm font-semibold';
-        t.setAttribute('aria-current', 'page');
+      const isMobile = t.classList.contains('mobile-nav-tab');
+
+      if (isMobile) {
+        if (isTarget) {
+          t.className = 'nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors bg-primary-container text-on-primary font-semibold shadow-sm focus:ring-2 focus:ring-primary';
+          t.setAttribute('aria-current', 'page');
+        } else {
+          t.className = 'nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container focus:ring-2 focus:ring-primary';
+          t.removeAttribute('aria-current');
+        }
       } else {
-        t.className = 'nav-tab px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded';
-        t.removeAttribute('aria-current');
+        if (isTarget) {
+          t.className = 'nav-tab px-space-md py-1.5 transition-colors bg-primary-container text-on-primary font-label-md rounded-lg shadow-sm font-semibold focus-visible:ring-2 focus-visible:ring-primary';
+          t.setAttribute('aria-current', 'page');
+        } else {
+          t.className = 'nav-tab px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded focus-visible:ring-2 focus-visible:ring-primary';
+          t.removeAttribute('aria-current');
+        }
       }
     });
 
