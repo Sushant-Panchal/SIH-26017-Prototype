@@ -7,6 +7,15 @@
 
 import { SCENARIO_PRESETS } from '../data/presets.js';
 import { predictionService } from '../api/prediction.js';
+import {
+  getRiskLevel,
+  getRiskWording,
+  getRiskSummary,
+  getRiskThresholdLabel,
+  getRiskBadgeClasses,
+  getRiskTextColor,
+  getRiskStrokeColor,
+} from '../utils/risk.js';
 
 let currentAssessmentState = {
   activePreset: 'medium',
@@ -439,21 +448,31 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
                 <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Predictive Risk Index</h3>
               </div>
               <span class="px-space-sm py-1 rounded font-label-sm text-label-sm font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 transition-all" id="riskBadge">
-                Medium Risk
+                MEDIUM RISK
               </span>
             </div>
 
             <!-- Delay Probability Radial Visualization -->
-            <div class="flex items-center justify-center py-space-sm">
+            <div class="flex flex-col items-center justify-center py-space-sm">
               <div class="relative flex items-center justify-center w-52 h-52">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
                   <circle class="text-surface-container-high" cx="60" cy="60" fill="none" r="48" stroke="currentColor" stroke-width="10"></circle>
                   <circle class="text-secondary transition-all duration-700 ease-out" cx="60" cy="60" fill="none" id="probabilityCircle" r="48" stroke="currentColor" stroke-dasharray="301.59" stroke-dashoffset="174" stroke-linecap="round" stroke-width="10"></circle>
                 </svg>
-                <div class="absolute flex flex-col items-center justify-center text-center">
+                <div class="absolute flex flex-col items-center justify-center text-center px-2">
                   <span class="font-headline-xl text-headline-xl font-bold text-on-surface font-tabular-data leading-none" id="probabilityValue">42.28%</span>
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Delay Probability</span>
-                  <span class="mt-1 font-label-sm text-[11px] font-semibold text-secondary" id="decisionOutcome">Delay: NO (Threshold &lt; 50%)</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Predicted Delay Probability</span>
+                  <span class="mt-1 font-label-sm text-[11px] font-semibold text-amber-600" id="decisionOutcome">Moderate predicted delay risk</span>
+                </div>
+              </div>
+
+              <!-- Contextual Snapshot Summary & Statutory Threshold -->
+              <div class="w-full mt-3 p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1 border border-outline-variant/30 text-center">
+                <p class="font-body-sm text-xs text-on-surface font-medium" id="riskSummaryText">
+                  Moderate predicted delay risk based on the current project snapshot.
+                </p>
+                <div class="flex items-center justify-center gap-2 font-label-sm text-[11px] text-on-surface-variant pt-1 border-t border-surface-container-high/60">
+                  <span id="riskThresholdNote" class="font-semibold">Risk Level: MEDIUM (Threshold: 40% – 59.9%)</span>
                 </div>
               </div>
             </div>
@@ -810,47 +829,52 @@ async function triggerAssessment(container) {
 }
 
 function renderResults(container, result) {
-  const prob = result.delay_probability_pct ?? (result.delay_probability * 100);
-  const riskLevel = result.risk_level || 'MEDIUM';
-  const delayed = result.predicted_delayed;
+  const rawProb = result.delay_probability_pct !== undefined
+    ? result.delay_probability_pct
+    : (result.delay_probability !== undefined ? result.delay_probability * 100 : 0);
+  const prob = typeof rawProb === 'number' && !isNaN(rawProb) ? rawProb : 0;
+
+  // Single shared source of truth for risk classification
+  const riskLevel = getRiskLevel(prob);
+  const wording = getRiskWording(riskLevel);
+  const summary = getRiskSummary(riskLevel);
+  const thresholdNote = getRiskThresholdLabel(riskLevel);
 
   // 1. Radial Progress and Metric
   const probValEl = container.querySelector('#probabilityValue');
   const circleEl = container.querySelector('#probabilityCircle');
   const decisionEl = container.querySelector('#decisionOutcome');
   const badgeEl = container.querySelector('#riskBadge');
+  const summaryEl = container.querySelector('#riskSummaryText');
+  const thresholdEl = container.querySelector('#riskThresholdNote');
 
   if (probValEl) probValEl.textContent = `${prob.toFixed(2)}%`;
-  
+
   if (decisionEl) {
-    decisionEl.textContent = delayed 
-      ? 'Delay: IMMINENT / LIKELY (Threshold ≥ 50%)' 
-      : 'Delay: UNLIKELY / ON TRACK (Threshold < 50%)';
-    decisionEl.className = `mt-1 font-label-sm text-[11px] font-semibold ${delayed ? 'text-error' : 'text-emerald-600'}`;
+    decisionEl.textContent = wording;
+    decisionEl.className = `mt-1 font-label-sm text-[11px] font-semibold ${getRiskTextColor(riskLevel)}`;
+  }
+
+  if (summaryEl) {
+    summaryEl.textContent = summary;
+  }
+
+  if (thresholdEl) {
+    thresholdEl.textContent = thresholdNote;
   }
 
   // Radial stroke circumference: 2 * PI * 48 = 301.59
   const totalCircumference = 301.59;
-  const offset = totalCircumference - (totalCircumference * (prob / 100));
+  const offset = totalCircumference - (totalCircumference * (Math.min(100, Math.max(0, prob)) / 100));
   if (circleEl) {
     circleEl.style.strokeDashoffset = offset;
-    circleEl.className = `transition-all duration-700 ease-out ${
-      riskLevel === 'CRITICAL' ? 'text-error' :
-      riskLevel === 'HIGH' ? 'text-secondary-container' :
-      riskLevel === 'MEDIUM' ? 'text-amber-500' : 'text-emerald-500'
-    }`;
+    circleEl.className = `transition-all duration-700 ease-out ${getRiskStrokeColor(riskLevel)}`;
   }
 
   // Risk Badge styling
   if (badgeEl) {
     badgeEl.textContent = `${riskLevel} RISK`;
-    const badgeColors = {
-      LOW: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-      MEDIUM: 'bg-amber-100 text-amber-900 border-amber-300',
-      HIGH: 'bg-orange-100 text-orange-900 border-orange-300',
-      CRITICAL: 'bg-red-100 text-red-900 border-red-300',
-    };
-    badgeEl.className = `px-space-sm py-1 rounded font-label-sm text-label-sm font-bold uppercase tracking-wider border ${badgeColors[riskLevel] || badgeColors.MEDIUM}`;
+    badgeEl.className = `px-space-sm py-1 rounded font-label-sm text-label-sm font-bold uppercase tracking-wider border ${getRiskBadgeClasses(riskLevel)}`;
   }
 
   // 2. Dynamic Risk-Increasing Factors (from risk_drivers)

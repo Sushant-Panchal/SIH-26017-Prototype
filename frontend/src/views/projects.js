@@ -4,6 +4,11 @@
  */
 
 import { SAMPLE_PROJECTS } from '../data/presets.js';
+import {
+  getRiskLevel,
+  getRiskBadgeClasses,
+  getRiskTextColor,
+} from '../utils/risk.js';
 
 export function renderProjectsView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -124,12 +129,9 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
             </div>
           </div>
         </td>
-        <td class="py-space-md px-space-md font-tabular-data font-bold ${
-          p.riskLevel === 'CRITICAL' ? 'text-error' :
-          p.riskLevel === 'HIGH' ? 'text-secondary' : 'text-amber-600'
-        }">${p.delayProbability}%</td>
+        <td class="py-space-md px-space-md font-tabular-data font-bold ${getRiskTextColor(p.riskLevel || getRiskLevel(p.delayProbability))}">${p.delayProbability}%</td>
         <td class="py-space-md px-space-md">
-          <span class="px-2 py-0.5 rounded-full ${p.badgeClass} font-label-sm text-xs font-bold">${p.riskLevel}</span>
+          <span class="px-2 py-0.5 rounded-full ${getRiskBadgeClasses(p.riskLevel || getRiskLevel(p.delayProbability))} font-label-sm text-xs font-bold border">${p.riskLevel || getRiskLevel(p.delayProbability)}</span>
         </td>
         <td class="py-space-md px-space-md text-right">
           <div class="inline-flex items-center gap-1.5">

@@ -4,9 +4,17 @@
  */
 
 import { SAMPLE_PROJECTS } from '../data/presets.js';
+import {
+  getRiskLevel,
+  getRiskWording,
+  getRiskSummary,
+  getRiskBadgeClasses,
+  getRiskTextColor,
+} from '../utils/risk.js';
 
 export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavigateToAssessment) {
   const project = SAMPLE_PROJECTS.find(p => p.id === projectId) || SAMPLE_PROJECTS[0];
+  const riskLevel = getRiskLevel(project.delayProbability);
 
   container.innerHTML = `
     <div class="flex flex-col w-full">
@@ -93,34 +101,29 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
           
           <!-- Severity Anchor Column -->
           <div class="lg:col-span-4 ${
-            project.riskLevel === 'CRITICAL' ? 'bg-error-container/40' :
-            project.riskLevel === 'HIGH' ? 'bg-orange-50' : 'bg-amber-50'
+            riskLevel === 'CRITICAL' ? 'bg-error-container/40' :
+            riskLevel === 'HIGH' ? 'bg-orange-50 dark:bg-orange-950/40' :
+            riskLevel === 'MEDIUM' ? 'bg-amber-50 dark:bg-amber-950/40' : 'bg-emerald-50 dark:bg-emerald-950/40'
           } p-space-xl flex flex-col justify-between relative overflow-hidden">
             <div class="flex flex-col gap-space-md relative z-10">
               <div class="flex items-center justify-between">
-                <span class="px-space-xs py-1 rounded ${
-                  project.riskLevel === 'CRITICAL' ? 'bg-error text-on-error' :
-                  project.riskLevel === 'HIGH' ? 'bg-secondary text-on-secondary' : 'bg-amber-500 text-white'
-                } font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                  <span class="w-2 h-2 rounded-full bg-surface-container-lowest animate-ping"></span>
-                  ${project.riskLevel} Risk Tier
+                <span class="px-space-xs py-1 rounded ${getRiskBadgeClasses(riskLevel)} font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm border">
+                  <span class="w-2 h-2 rounded-full bg-current animate-ping"></span>
+                  ${riskLevel} Risk Tier
                 </span>
                 <span class="font-tabular-data text-label-sm font-semibold">XGB-26017 Engine</span>
               </div>
               <div class="flex flex-col pt-space-xs">
                 <span class="font-label-md text-label-md uppercase tracking-wide text-on-surface-variant font-semibold">Model Delay Probability</span>
                 <div class="flex items-baseline gap-space-xs">
-                  <span class="font-headline-xl text-headline-xl font-tabular-data ${
-                    project.riskLevel === 'CRITICAL' ? 'text-error' :
-                    project.riskLevel === 'HIGH' ? 'text-secondary' : 'text-amber-600'
-                  } font-extrabold tracking-tight">${project.delayProbability}%</span>
+                  <span class="font-headline-xl text-headline-xl font-tabular-data ${getRiskTextColor(riskLevel)} font-extrabold tracking-tight">${project.delayProbability}%</span>
                   <span class="font-headline-sm text-headline-sm font-bold text-on-surface">PROBABILITY</span>
                 </div>
               </div>
-              <div class="p-space-sm rounded bg-surface-container-lowest/80 shadow-sm backdrop-blur-sm flex flex-col gap-0.5">
-                <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Predicted Statutory Impact</span>
+              <div class="p-space-sm rounded bg-surface-container-lowest/80 shadow-sm backdrop-blur-sm flex flex-col gap-0.5 border border-outline-variant/30">
+                <span class="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">Predicted Statutory Impact</span>
                 <span class="font-headline-sm text-headline-sm text-on-surface font-bold leading-snug">
-                  ${project.riskLevel === 'CRITICAL' || project.riskLevel === 'HIGH' ? 'Delay Predicted (Significant milestone slippage expected without intervention)' : 'Nominal progress tracking within acceptable variance'}
+                  ${getRiskSummary(riskLevel)}
                 </span>
               </div>
             </div>

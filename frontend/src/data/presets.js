@@ -323,9 +323,9 @@ export const SAMPLE_PROJECTS = [
     stage: 'Joint Survey 3A',
     progressPct: 31,
     delayProbability: 58.4,
-    riskLevel: 'HIGH',
-    badgeClass: 'bg-secondary-fixed text-on-secondary-fixed-variant',
-    presetKey: 'high',
+    riskLevel: 'MEDIUM',
+    badgeClass: 'bg-amber-100 text-amber-900 border border-amber-300',
+    presetKey: 'medium',
   },
   {
     id: 'BF-NH-2024-22',

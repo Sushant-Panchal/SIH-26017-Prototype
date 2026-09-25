@@ -4,6 +4,11 @@
  */
 
 import { SAMPLE_PROJECTS } from '../data/presets.js';
+import {
+  getRiskLevel,
+  getRiskBadgeClasses,
+  getRiskTextColor,
+} from '../utils/risk.js';
 
 export function renderDashboardView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -378,19 +383,13 @@ function renderProjectRows(projects) {
           </div>
         </div>
       </td>
-      <td class="py-space-sm px-space-sm font-tabular-data font-bold ${
-        project.riskLevel === 'CRITICAL' ? 'text-error' :
-        project.riskLevel === 'HIGH' ? 'text-secondary' : 'text-amber-600'
-      }">
+      <td class="py-space-sm px-space-sm font-tabular-data font-bold ${getRiskTextColor(project.riskLevel || getRiskLevel(project.delayProbability))}">
         ${project.delayProbability}%
       </td>
       <td class="py-space-sm px-space-sm">
-        <span class="px-2 py-0.5 rounded-full ${project.badgeClass} font-label-sm text-label-sm font-bold inline-flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full ${
-            project.riskLevel === 'CRITICAL' ? 'bg-error' :
-            project.riskLevel === 'HIGH' ? 'bg-secondary' : 'bg-amber-500'
-          }"></span>
-          ${project.riskLevel}
+        <span class="px-2 py-0.5 rounded-full ${getRiskBadgeClasses(project.riskLevel || getRiskLevel(project.delayProbability))} font-label-sm text-label-sm font-bold inline-flex items-center gap-1 border">
+          <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+          ${project.riskLevel || getRiskLevel(project.delayProbability)}
         </span>
       </td>
       <td class="py-space-sm px-space-sm text-right">
