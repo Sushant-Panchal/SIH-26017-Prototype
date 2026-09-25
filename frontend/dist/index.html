@@ -20,6 +20,54 @@
       font-variant-numeric: tabular-nums;
       font-feature-settings: 'tnum' 1, 'cv05' 1;
     }
+    :root {
+      --color-background: #f7f9fb;
+      --color-on-background: #191c1e;
+      --color-surface: #f7f9fb;
+      --color-surface-dim: #d8dadc;
+      --color-surface-bright: #f7f9fb;
+      --color-surface-elevated: #ffffff;
+      --color-surface-low: #f2f4f6;
+      --color-surface-container: #eceef0;
+      --color-surface-high: #e6e8ea;
+      --color-surface-highest: #e0e3e5;
+      --color-surface-variant: #e0e3e5;
+      --color-text: #191c1e;
+      --color-text-muted: #44474c;
+      --color-border: #c5c6cd;
+      --color-primary: #0b192c;
+      --color-primary-container: #0e1c2f;
+      --color-on-primary: #ffffff;
+      --color-secondary: #9d4300;
+      --color-secondary-container: #fd761a;
+      --color-danger: #ba1a1a;
+      --color-warning: #9d4300;
+      --color-success: #15803d;
+    }
+    .dark {
+      --color-background: #0a0f18;
+      --color-on-background: #e2e8f0;
+      --color-surface: #0f172a;
+      --color-surface-dim: #0b111c;
+      --color-surface-bright: #172236;
+      --color-surface-elevated: #152033;
+      --color-surface-low: #111a2a;
+      --color-surface-container: #182438;
+      --color-surface-high: #1e2c45;
+      --color-surface-highest: #253654;
+      --color-surface-variant: #1e2c45;
+      --color-text: #e2e8f0;
+      --color-text-muted: #94a3b8;
+      --color-border: #2c3e58;
+      --color-primary: #38bdf8;
+      --color-primary-container: #1e293b;
+      --color-on-primary: #ffffff;
+      --color-secondary: #f97316;
+      --color-secondary-container: #ea580c;
+      --color-danger: #f87171;
+      --color-warning: #fb923c;
+      --color-success: #4ade80;
+    }
   </style>
   <script src="https://cdn.tailwindcss.com"></script>
   <script id="tailwind-config">
@@ -28,53 +76,53 @@
       theme: {
         extend: {
           colors: {
-            "surface-container-highest": "#e0e3e5",
+            "surface-container-highest": "var(--color-surface-highest)",
             "secondary-fixed-dim": "#ffb690",
-            "surface-container-lowest": "#ffffff",
+            "surface-container-lowest": "var(--color-surface-elevated)",
             "tertiary-fixed": "#d8e3fb",
             "on-secondary": "#ffffff",
-            "on-surface": "#191c1e",
-            "surface-container-high": "#e6e8ea",
-            "surface-container-low": "#f2f4f6",
+            "on-surface": "var(--color-text)",
+            "surface-container-high": "var(--color-surface-high)",
+            "surface-container-low": "var(--color-surface-low)",
             "on-tertiary-container": "#79849a",
             "tertiary-container": "#111c2d",
-            "surface-container": "#eceef0",
+            "surface-container": "var(--color-surface-container)",
             "on-error-container": "#93000a",
             "on-primary-fixed": "#0e1c2f",
             "on-tertiary-fixed-variant": "#3c475a",
-            "on-surface-variant": "#44474c",
-            "surface": "#f7f9fb",
-            "outline": "#75777d",
+            "on-surface-variant": "var(--color-text-muted)",
+            "surface": "var(--color-surface)",
+            "outline": "var(--color-border)",
             "on-secondary-container": "#5c2400",
             "on-primary-container": "#77849c",
             "on-tertiary": "#ffffff",
-            "background": "#f7f9fb",
+            "background": "var(--color-background)",
             "on-secondary-fixed-variant": "#783200",
             "primary-fixed-dim": "#bac7e1",
             "error-container": "#ffdad6",
             "inverse-on-surface": "#eff1f3",
-            "surface-dim": "#d8dadc",
-            "on-primary": "#ffffff",
+            "surface-dim": "var(--color-surface-dim)",
+            "on-primary": "var(--color-on-primary)",
             "inverse-surface": "#2d3133",
-            "primary": "#000000",
+            "primary": "var(--color-primary)",
             "on-primary-fixed-variant": "#3a475c",
-            "secondary": "#9d4300",
+            "secondary": "var(--color-secondary)",
             "tertiary": "#000000",
-            "primary-container": "#0e1c2f",
+            "primary-container": "var(--color-primary-container)",
             "on-secondary-fixed": "#341100",
             "on-tertiary-fixed": "#111c2d",
-            "outline-variant": "#c5c6cd",
+            "outline-variant": "var(--color-border)",
             "tertiary-fixed-dim": "#bcc7de",
             "inverse-primary": "#bac7e1",
             "primary-fixed": "#d6e3fe",
-            "on-background": "#191c1e",
-            "secondary-container": "#fd761a",
-            "surface-bright": "#f7f9fb",
+            "on-background": "var(--color-text)",
+            "secondary-container": "var(--color-secondary-container)",
+            "surface-bright": "var(--color-surface-bright)",
             "surface-tint": "#525f75",
             "secondary-fixed": "#ffdbca",
-            "surface-variant": "#e0e3e5",
+            "surface-variant": "var(--color-surface-variant)",
             "on-error": "#ffffff",
-            "error": "#ba1a1a"
+            "error": "var(--color-danger)"
           },
           borderRadius: {
             DEFAULT: "0.125rem",
@@ -127,7 +175,7 @@
       }
     };
   </script>
-  <script type="module" crossorigin src="/assets/index-DPLBxyeZ.js"></script>
+  <script type="module" crossorigin src="/assets/index-BbJoQ6a9.js"></script>
 </head>
 <body class="bg-background font-body-md text-on-surface antialiased selection:bg-secondary-container selection:text-on-surface min-h-screen flex flex-col justify-between">
 
@@ -173,6 +221,37 @@
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
           </span>
           <span class="font-label-sm text-label-sm text-on-surface font-tabular-data" id="backendStatusText">Backend: Connecting...</span>
+        </div>
+
+        <!-- Theme Selector Control -->
+        <div class="relative" id="themeControlContainer">
+          <button class="flex items-center gap-0.5 p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded" id="themeToggleBtn" type="button" aria-label="Toggle color theme" aria-haspopup="true" aria-expanded="false" title="Color Theme">
+            <span class="material-symbols-outlined text-[20px]" id="themeIcon">brightness_auto</span>
+            <span class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+          </button>
+          <div class="hidden absolute right-0 mt-1 w-32 bg-surface-container-lowest border border-outline-variant/40 rounded-lg shadow-lg py-1 z-50 flex flex-col text-on-surface font-label-sm text-xs" id="themeMenu" role="menu">
+            <button class="theme-option-btn px-3 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors text-left w-full" data-theme="system" role="menuitem" type="button">
+              <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">brightness_auto</span>
+                <span>System</span>
+              </span>
+              <span class="material-symbols-outlined text-[14px] text-primary hidden check-icon">check</span>
+            </button>
+            <button class="theme-option-btn px-3 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors text-left w-full" data-theme="light" role="menuitem" type="button">
+              <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">light_mode</span>
+                <span>Light</span>
+              </span>
+              <span class="material-symbols-outlined text-[14px] text-primary hidden check-icon">check</span>
+            </button>
+            <button class="theme-option-btn px-3 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors text-left w-full" data-theme="dark" role="menuitem" type="button">
+              <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">dark_mode</span>
+                <span>Dark</span>
+              </span>
+              <span class="material-symbols-outlined text-[14px] text-primary hidden check-icon">check</span>
+            </button>
+          </div>
         </div>
 
         <!-- Notification Trigger -->

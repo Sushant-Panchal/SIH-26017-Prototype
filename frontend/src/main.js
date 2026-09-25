@@ -10,6 +10,7 @@ import { renderDetailView } from './views/detail.js';
 import { renderNotificationsView } from './views/notifications.js';
 import { predictionService } from './api/prediction.js';
 import { notificationStore } from './utils/notifications.js';
+import { themeManager } from './utils/theme.js';
 
 class BhoomiSakhaApp {
   constructor() {
@@ -21,6 +22,8 @@ class BhoomiSakhaApp {
   }
 
   init() {
+    themeManager.init();
+    this.setupThemeToggle();
     this.setupNavigation();
     this.setupClock();
     this.setupNotificationBell();
@@ -68,6 +71,76 @@ class BhoomiSakhaApp {
     }
     if (bellBtn) {
       bellBtn.setAttribute('title', count > 0 ? `${count} Unread System Notifications` : 'No Unread Notifications');
+    }
+  }
+
+  setupThemeToggle() {
+    const toggleBtn = document.getElementById('themeToggleBtn');
+    const menu = document.getElementById('themeMenu');
+    const themeIcon = document.getElementById('themeIcon');
+    const optionBtns = document.querySelectorAll('.theme-option-btn');
+
+    const updateUI = (theme) => {
+      const iconMap = {
+        system: 'brightness_auto',
+        light: 'light_mode',
+        dark: 'dark_mode',
+      };
+      if (themeIcon) {
+        themeIcon.textContent = iconMap[theme] || 'brightness_auto';
+      }
+      optionBtns.forEach(btn => {
+        const itemTheme = btn.getAttribute('data-theme');
+        const check = btn.querySelector('.check-icon');
+        if (itemTheme === theme) {
+          btn.classList.add('bg-surface-container', 'font-semibold');
+          if (check) check.classList.remove('hidden');
+        } else {
+          btn.classList.remove('bg-surface-container', 'font-semibold');
+          if (check) check.classList.add('hidden');
+        }
+      });
+    };
+
+    updateUI(themeManager.currentTheme);
+    themeManager.subscribe((theme) => updateUI(theme));
+
+    if (toggleBtn && menu) {
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !menu.classList.contains('hidden');
+        if (isOpen) {
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          menu.classList.remove('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      optionBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const selected = btn.getAttribute('data-theme');
+          themeManager.setTheme(selected);
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!toggleBtn.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+          menu.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.focus();
+        }
+      });
     }
   }
 
