@@ -95,4 +95,24 @@ export const apiClient = {
       body: JSON.stringify(body),
     });
   },
+
+  patch(endpoint, body, options = {}) {
+    return request(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
+  put(endpoint, body, options = {}) {
+    return request(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  },
+
+  delete(endpoint, options = {}) {
+    return request(endpoint, { ...options, method: 'DELETE' });
+  },
 };

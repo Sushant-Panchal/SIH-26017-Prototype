@@ -22,12 +22,17 @@ from .case_models import (
     UserResponse,
     LandCreate,
     LandResponse,
+    LandUpdate,
     CaseCreate,
     CaseResponse,
+    CaseListResponse,
+    OfficerMetricsSummary,
     CaseAssignRequest,
     CaseStatusUpdateRequest,
     CaseDocumentCreate,
     CaseDocumentResponse,
+    DocumentRequestPayload,
+    DocumentVerifyPayload,
     CaseEventCreate,
     CaseEventResponse,
     NotificationResponse,
@@ -36,6 +41,71 @@ from .case_models import (
 logger = logging.getLogger("bhoomi_sakha.case_routes")
 
 router = APIRouter(prefix="/api", tags=["Case Management"])
+
+# ============================================================
+# CASE LIFECYCLE ENFORCEMENT STATE MACHINE
+# ============================================================
+
+VALID_STATUS_TRANSITIONS = {
+    CaseStatus.SUBMITTED.value: [
+        CaseStatus.RECEIVED.value,
+        CaseStatus.ASSIGNED.value,
+        CaseStatus.UNDER_REVIEW.value,
+        CaseStatus.REJECTED.value,
+    ],
+    CaseStatus.RECEIVED.value: [
+        CaseStatus.ASSIGNED.value,
+        CaseStatus.UNDER_REVIEW.value,
+        CaseStatus.REJECTED.value,
+    ],
+    CaseStatus.ASSIGNED.value: [
+        CaseStatus.UNDER_REVIEW.value,
+        CaseStatus.INVESTIGATION.value,
+        CaseStatus.DOCUMENTS_REQUIRED.value,
+        CaseStatus.REJECTED.value,
+    ],
+    CaseStatus.UNDER_REVIEW.value: [
+        CaseStatus.DOCUMENTS_REQUIRED.value,
+        CaseStatus.INVESTIGATION.value,
+        CaseStatus.ACTION_TAKEN.value,
+        CaseStatus.ESCALATED.value,
+        CaseStatus.RESOLVED.value,
+        CaseStatus.REJECTED.value,
+    ],
+    CaseStatus.DOCUMENTS_REQUIRED.value: [
+        CaseStatus.UNDER_REVIEW.value,
+        CaseStatus.INVESTIGATION.value,
+        CaseStatus.REJECTED.value,
+    ],
+    CaseStatus.INVESTIGATION.value: [
+        CaseStatus.ACTION_TAKEN.value,
+        CaseStatus.ESCALATED.value,
+        CaseStatus.DOCUMENTS_REQUIRED.value,
+        CaseStatus.RESOLVED.value,
+        CaseStatus.REJECTED.value,
+    ],
+    CaseStatus.ACTION_TAKEN.value: [
+        CaseStatus.RESOLVED.value,
+        CaseStatus.INVESTIGATION.value,
+        CaseStatus.ESCALATED.value,
+    ],
+    CaseStatus.ESCALATED.value: [
+        CaseStatus.INVESTIGATION.value,
+        CaseStatus.ACTION_TAKEN.value,
+        CaseStatus.RESOLVED.value,
+    ],
+    CaseStatus.RESOLVED.value: [
+        CaseStatus.CLOSED.value,
+        CaseStatus.UNDER_REVIEW.value,
+    ],
+    CaseStatus.REJECTED.value: [
+        CaseStatus.CLOSED.value,
+        CaseStatus.UNDER_REVIEW.value,
+    ],
+    CaseStatus.CLOSED.value: [
+        CaseStatus.UNDER_REVIEW.value,
+    ],
+}
 
 
 # ============================================================
@@ -101,6 +171,7 @@ async def append_case_event(
     old_status: Optional[str] = None,
     new_status: Optional[str] = None,
     comment: Optional[str] = None,
+    is_internal: bool = False,
     metadata: Optional[dict] = None,
     db=None,
 ) -> dict:
@@ -117,6 +188,7 @@ async def append_case_event(
         "old_status": old_status,
         "new_status": new_status,
         "comment": comment,
+        "is_internal": is_internal,
         "metadata": metadata or {},
         "timestamp": timestamp,
     }
@@ -241,6 +313,28 @@ async def get_user_lands(user_id: str, auth_user: Optional[dict] = Depends(get_a
     return [LandResponse(**sanitize_doc(d)) for d in results]
 
 
+@router.patch("/lands/{land_id}", response_model=LandResponse)
+async def update_land(land_id: str, payload: LandUpdate, auth_user: Optional[dict] = Depends(get_auth_context)):
+    db = get_database()
+    lands = db.get_collection("lands")
+    land = await lands.find_one({"land_id": land_id})
+    if not land:
+        raise HTTPException(status_code=404, detail=f"Land record '{land_id}' not found.")
+
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if land.get("owner_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot modify another citizen's land record.")
+
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        return LandResponse(**sanitize_doc(land))
+
+    updates["updated_at"] = now_utc()
+    await lands.update_one({"land_id": land_id}, {"$set": updates})
+    updated = await lands.find_one({"land_id": land_id})
+    return LandResponse(**sanitize_doc(updated))
+
+
 # ============================================================
 # CASES API
 # ============================================================
@@ -309,6 +403,86 @@ async def create_case(payload: CaseCreate, auth_user: Optional[dict] = Depends(g
     )
 
     return CaseResponse(**sanitize_doc(doc))
+
+
+@router.get("/cases/metrics/summary", response_model=OfficerMetricsSummary)
+async def get_case_metrics_summary(officer_id: Optional[str] = None, auth_user: Optional[dict] = Depends(get_auth_context)):
+    db = get_database()
+    cases = db.get_collection("cases")
+    all_cases = await cases.find({}).to_list(1000)
+
+    target_officer = officer_id or (auth_user and auth_user.get("user_id"))
+
+    total = len(all_cases)
+    new_cases = sum(1 for c in all_cases if c.get("status") == CaseStatus.SUBMITTED.value)
+    assigned_to_me = sum(1 for c in all_cases if target_officer and c.get("assigned_officer_id") == target_officer)
+    high_risk = sum(1 for c in all_cases if c.get("risk_level") in ("HIGH", "CRITICAL") or (c.get("risk_probability") or 0) >= 0.65)
+    docs_req = sum(1 for c in all_cases if c.get("status") == CaseStatus.DOCUMENTS_REQUIRED.value)
+    escalated = sum(1 for c in all_cases if c.get("status") == CaseStatus.ESCALATED.value)
+    resolved = sum(1 for c in all_cases if c.get("status") in (CaseStatus.RESOLVED.value, CaseStatus.CLOSED.value))
+    active = sum(1 for c in all_cases if c.get("status") not in (CaseStatus.RESOLVED.value, CaseStatus.REJECTED.value, CaseStatus.CLOSED.value))
+
+    return OfficerMetricsSummary(
+        total_cases=total,
+        new_cases=new_cases,
+        assigned_to_me=assigned_to_me,
+        high_risk=high_risk,
+        documents_required=docs_req,
+        escalated=escalated,
+        resolved=resolved,
+        active=active,
+    )
+
+
+@router.get("/cases", response_model=CaseListResponse)
+async def list_cases(
+    status: Optional[str] = None,
+    risk_level: Optional[str] = None,
+    district: Optional[str] = None,
+    project_id: Optional[str] = None,
+    category: Optional[str] = None,
+    assigned_officer_id: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 15,
+    auth_user: Optional[dict] = Depends(get_auth_context),
+):
+    query = {}
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        query["citizen_id"] = auth_user.get("user_id")
+    elif assigned_officer_id:
+        query["assigned_officer_id"] = assigned_officer_id
+
+    if status:
+        query["status"] = status
+    if risk_level:
+        query["risk_level"] = risk_level.upper()
+    if project_id:
+        query["project_id"] = project_id
+    if category:
+        query["category"] = category
+    if search:
+        query["$or"] = [
+            {"case_id": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+        ]
+
+    db = get_database()
+    cases = db.get_collection("cases")
+    total = await cases.count_documents(query)
+    skip = (page - 1) * limit
+    cursor = cases.find(query).sort("created_at", -1).skip(skip).limit(limit)
+    items = await cursor.to_list(limit)
+
+    import math
+    pages = math.ceil(total / limit) if total > 0 else 1
+    return CaseListResponse(
+        items=[CaseResponse(**sanitize_doc(d)) for d in items],
+        total=total,
+        page=page,
+        pages=pages,
+        limit=limit,
+    )
 
 
 @router.get("/cases/{case_id}", response_model=CaseResponse)
@@ -461,6 +635,15 @@ async def update_case_status(case_id: str, payload: CaseStatusUpdateRequest, aut
 
     old_status = case.get("status")
     new_status = payload.status.value
+
+    # Server-side state transition validation
+    allowed = VALID_STATUS_TRANSITIONS.get(old_status, [])
+    if new_status != old_status and new_status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid case status transition from '{old_status}' to '{new_status}'. Allowed transitions: {', '.join(allowed)}",
+        )
+
     now = now_utc()
 
     update_fields = {
@@ -500,11 +683,60 @@ async def update_case_status(case_id: str, payload: CaseStatusUpdateRequest, aut
     return CaseResponse(**sanitize_doc(updated_case))
 
 
+@router.post("/cases/{case_id}/request-document", response_model=CaseResponse)
+async def request_document(case_id: str, payload: DocumentRequestPayload, auth_user: Optional[dict] = Depends(get_auth_context)):
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    # Check officer authority
+    if auth_user and auth_user.get("role") not in (UserRole.OFFICER.value, UserRole.SUPER_ADMIN.value):
+        raise HTTPException(status_code=403, detail="Forbidden: Only officers can request documents.")
+
+    now = now_utc()
+    cases = db.get_collection("cases")
+    await cases.update_one(
+        {"case_id": case_id},
+        {"$set": {"status": CaseStatus.DOCUMENTS_REQUIRED.value, "updated_at": now}}
+    )
+
+    comment = f"Document requested: {payload.document_type}. Reason: {payload.reason}"
+    if payload.message:
+        comment += f" Note: {payload.message}"
+
+    await append_case_event(
+        case_id=case_id,
+        actor_user_id=payload.actor_user_id,
+        action="document_requested",
+        old_status=case.get("status"),
+        new_status=CaseStatus.DOCUMENTS_REQUIRED.value,
+        comment=comment,
+        metadata={"document_type": payload.document_type, "reason": payload.reason},
+        db=db,
+    )
+
+    await create_notification(
+        user_id=case["citizen_id"],
+        title="Supporting Document Requested",
+        message=f"An officer requested '{payload.document_type}' for your case {case_id}. Reason: {payload.reason}",
+        notif_type=NotificationType.DOCUMENT_REQUIRED.value,
+        case_id=case_id,
+        db=db,
+    )
+
+    updated = await get_case_or_404(case_id, db=db)
+    return CaseResponse(**sanitize_doc(updated))
+
+
 @router.post("/cases/{case_id}/events", response_model=CaseEventResponse, status_code=201)
-async def create_event(case_id: str, payload: CaseEventCreate):
+async def create_event(case_id: str, payload: CaseEventCreate, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     await get_case_or_404(case_id, db=db)
     await get_user_or_404(payload.actor_user_id, db=db)
+
+    # Citizen cannot create internal officer notes
+    if payload.is_internal:
+        if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+            raise HTTPException(status_code=403, detail="Forbidden: Citizens cannot author internal officer notes.")
 
     event_doc = await append_case_event(
         case_id=case_id,
@@ -513,6 +745,7 @@ async def create_event(case_id: str, payload: CaseEventCreate):
         old_status=payload.old_status,
         new_status=payload.new_status,
         comment=payload.comment,
+        is_internal=payload.is_internal,
         metadata=payload.metadata,
         db=db,
     )
@@ -521,11 +754,17 @@ async def create_event(case_id: str, payload: CaseEventCreate):
 
 
 @router.get("/cases/{case_id}/events", response_model=List[CaseEventResponse])
-async def get_case_events(case_id: str):
+async def get_case_events(case_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     await get_case_or_404(case_id, db=db)
     case_events = db.get_collection("case_events")
-    cursor = case_events.find({"case_id": case_id}).sort("timestamp", 1)
+
+    query = {"case_id": case_id}
+    # Filter out internal notes for citizen users
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        query["is_internal"] = {"$ne": True}
+
+    cursor = case_events.find(query).sort("timestamp", 1)
     results = await cursor.to_list(200)
     return [CaseEventResponse(**sanitize_doc(d)) for d in results]
 
@@ -583,6 +822,64 @@ async def get_case_documents(case_id: str):
     cursor = case_docs.find({"case_id": case_id}).sort("uploaded_at", -1)
     results = await cursor.to_list(100)
     return [CaseDocumentResponse(**sanitize_doc(d)) for d in results]
+
+
+@router.post("/cases/{case_id}/documents/{document_id}/verify", response_model=CaseDocumentResponse)
+async def verify_document(case_id: str, document_id: str, payload: DocumentVerifyPayload, auth_user: Optional[dict] = Depends(get_auth_context)):
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    # Check officer role
+    if auth_user and auth_user.get("role") not in (UserRole.OFFICER.value, UserRole.SUPER_ADMIN.value):
+        raise HTTPException(status_code=403, detail="Forbidden: Only officers can verify documents.")
+
+    case_docs = db.get_collection("case_documents")
+    doc = await case_docs.find_one({"document_id": document_id, "case_id": case_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found on case '{case_id}'.")
+
+    now = now_utc()
+    status_val = payload.verification_status.value
+    update_fields = {
+        "verification_status": status_val,
+        "verified_at": now,
+        "verified_by": payload.actor_user_id,
+    }
+    if payload.rejection_reason:
+        update_fields["rejection_reason"] = payload.rejection_reason
+
+    await case_docs.update_one({"document_id": document_id}, {"$set": update_fields})
+
+    action_name = "document_verified" if payload.verification_status == DocumentVerificationStatus.VERIFIED else "document_rejected"
+    comment = f"Document '{doc.get('file_name')}' was {status_val}."
+    if payload.rejection_reason:
+        comment += f" Reason: {payload.rejection_reason}"
+
+    await append_case_event(
+        case_id=case_id,
+        actor_user_id=payload.actor_user_id,
+        action=action_name,
+        comment=comment,
+        metadata={"document_id": document_id, "status": status_val},
+        db=db,
+    )
+
+    notif_title = f"Document {status_val.capitalize()}"
+    notif_msg = f"Your uploaded document '{doc.get('file_name')}' for case {case_id} has been {status_val}."
+    if payload.rejection_reason:
+        notif_msg += f" Note: {payload.rejection_reason}"
+
+    await create_notification(
+        user_id=case["citizen_id"],
+        title=notif_title,
+        message=notif_msg,
+        notif_type=NotificationType.DOCUMENT_VERIFIED.value if status_val == "verified" else NotificationType.OFFICER_MESSAGE.value,
+        case_id=case_id,
+        db=db,
+    )
+
+    updated_doc = await case_docs.find_one({"document_id": document_id})
+    return CaseDocumentResponse(**sanitize_doc(updated_doc))
 
 
 # ============================================================

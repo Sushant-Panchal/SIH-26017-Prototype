@@ -33,6 +33,10 @@ export const caseService = {
     return apiClient.get(`/api/users/${encodeURIComponent(userId)}/lands`);
   },
 
+  async updateLand(landId, updates) {
+    return apiClient.patch ? apiClient.patch(`/api/lands/${encodeURIComponent(landId)}`, updates) : apiClient.post(`/api/lands/${encodeURIComponent(landId)}`, updates);
+  },
+
   // ============================================================
   // Cases / Complaints
   // ============================================================
@@ -42,6 +46,22 @@ export const caseService = {
 
   async getCase(caseId) {
     return apiClient.get(`/api/cases/${encodeURIComponent(caseId)}`);
+  },
+
+  async listCases(params = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') {
+        searchParams.append(k, v);
+      }
+    });
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    return apiClient.get(`/api/cases${query}`);
+  },
+
+  async getMetricsSummary(officerId = null) {
+    const query = officerId ? `?officer_id=${encodeURIComponent(officerId)}` : '';
+    return apiClient.get(`/api/cases/metrics/summary${query}`);
   },
 
   async getUserCases(userId) {
@@ -58,6 +78,14 @@ export const caseService = {
 
   async updateCaseStatus(caseId, payload) {
     return apiClient.post(`/api/cases/${encodeURIComponent(caseId)}/status`, payload);
+  },
+
+  async requestDocument(caseId, payload) {
+    return apiClient.post(`/api/cases/${encodeURIComponent(caseId)}/request-document`, payload);
+  },
+
+  async verifyDocument(caseId, documentId, payload) {
+    return apiClient.post(`/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(documentId)}/verify`, payload);
   },
 
   async createCaseEvent(caseId, payload) {

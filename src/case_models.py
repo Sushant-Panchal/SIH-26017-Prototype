@@ -151,6 +151,18 @@ class LandResponse(LandBase):
     updated_at: datetime
 
 
+class LandUpdate(BaseModel):
+    state: Optional[str] = None
+    district: Optional[str] = None
+    taluka: Optional[str] = None
+    village: Optional[str] = None
+    survey_number: Optional[str] = None
+    area_hectares: Optional[float] = Field(default=None, gt=0)
+    land_type: Optional[str] = None
+    acquisition_status: Optional[str] = None
+    project_id: Optional[str] = None
+
+
 # ============================================================
 # CASES / COMPLAINTS
 # ============================================================
@@ -192,6 +204,25 @@ class CaseResponse(CaseBase):
     resolved_at: Optional[datetime] = None
 
 
+class CaseListResponse(BaseModel):
+    items: List[CaseResponse]
+    total: int
+    page: int
+    pages: int
+    limit: int
+
+
+class OfficerMetricsSummary(BaseModel):
+    total_cases: int
+    new_cases: int
+    assigned_to_me: int
+    high_risk: int
+    documents_required: int
+    escalated: int
+    resolved: int
+    active: int
+
+
 # ============================================================
 # CASE DOCUMENTS (METADATA)
 # ============================================================
@@ -216,6 +247,20 @@ class CaseDocumentResponse(BaseModel):
     uploaded_at: datetime
     verified_at: Optional[datetime] = None
     verified_by: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+
+class DocumentRequestPayload(BaseModel):
+    document_type: str = Field(..., min_length=2, max_length=80)
+    reason: str = Field(..., min_length=3, max_length=300)
+    message: Optional[str] = None
+    actor_user_id: str
+
+
+class DocumentVerifyPayload(BaseModel):
+    verification_status: DocumentVerificationStatus
+    rejection_reason: Optional[str] = None
+    actor_user_id: str
 
 
 # ============================================================
@@ -228,6 +273,7 @@ class CaseEventCreate(BaseModel):
     old_status: Optional[str] = None
     new_status: Optional[str] = None
     comment: Optional[str] = None
+    is_internal: bool = False
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -239,6 +285,7 @@ class CaseEventResponse(BaseModel):
     old_status: Optional[str] = None
     new_status: Optional[str] = None
     comment: Optional[str] = None
+    is_internal: bool = False
     metadata: Dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime
 
