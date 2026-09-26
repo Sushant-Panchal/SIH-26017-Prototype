@@ -1,3 +1,7 @@
+/**
+ * Bhoomi Sakha - Internationalization Dictionary
+ */
+
 export default {
   "header": {
     "platformName": "भूमी सखा",
@@ -238,28 +242,35 @@ export default {
     "inferenceUnavailable": "अंदाज सेवा अनुपलब्ध",
     "retryAssessment": "पुन्हा प्रयत्न करा",
     "readAloudIntro": "भूमी सखा मूल्यांकन निकाल.",
-    "labelCurrentStage": "चालू वैधानिक टप्पा (Current Statutory Stage)"
+    "labelCurrentStage": "चालू वैधानिक टप्पा (Current Statutory Stage)",
+    "riskForecast": "जोखीम अंदाज (Risk Forecast)",
+    "delayProb": "विलंब शक्यता",
+    "predictedOutcome": "अंदाजित निष्कर्ष",
+    "awaitingInput": "टेलीमेट्री इनपुटची प्रतीक्षा...",
+    "statutoryNotice": "सूचना: सक्रिय इनपुटच्या आधारे रिअल-टाइममध्ये निष्कर्ष अद्यतनित होतो.",
+    "serviceUnavailableMsg": "पूर्वानुमान सेवा तात्पुरती अनुपलब्ध आहे. कृपया पुन्हा प्रयत्न करा."
   },
   "projects": {
     "title": "राष्ट्रीय प्रकल्प निर्देशिका",
     "subtitle": "सर्व राज्य कार्यक्षेत्रांमध्ये सक्रिय पायाभूत सुविधा कॉरिडॉर, कॅडस्ट्रल पडताळणी टप्पे आणि अंदाजित विलंब जोखमींचा आढावा घ्या.",
     "newAssessment": "नवीन प्रकल्प मूल्यांकन",
-    "filterSector": "क्षेत्रानुसार फिल्टर करा",
+    "filterSector": "क्षेत्रानुसार फिल्टर (Filter by Sector)",
     "allSectors": "सर्व क्षेत्रे (महामार्ग, रेल्वे, ऊर्जा, मेट्रो)",
-    "filterRisk": "जोखीम श्रेणी",
+    "filterRisk": "जोखीम श्रेणी (Risk Tier)",
     "allRisks": "सर्व जोखीम श्रेणी",
     "searchPlaceholder": "नाव, आयडी किंवा जिल्ह्यानुसार शोधा...",
     "colId": "प्रकल्प आयडी",
-    "colName": "नाव आणि कॉरिडॉर",
-    "colDistrict": "राज्य आणि जिल्हा",
-    "colStage": "वैधानिक टप्पा",
-    "colProgress": "संपादन प्रगती",
-    "colRisk": "अंदाजित विलंब जोखीम",
-    "colTier": "स्थिती श्रेणी",
-    "colAction": "कृती",
-    "assessRisk": "जोखीम मूल्यांकन",
+    "colName": "नाव आणि क्षेत्र (Name & Sector)",
+    "colDistrict": "राज्य व जिल्हा (State & District)",
+    "colStage": "वैधानिक टप्पा (Statutory Stage)",
+    "colProgress": "संपादन प्रगती (Acquisition Progress)",
+    "colRisk": "अंदाजित विलंब जोखीम (Predicted Delay Risk)",
+    "colTier": "स्थिती श्रेणी (Status Tier)",
+    "colAction": "कृती (Actions)",
+    "assessRisk": "जोखीम मूल्यांकन (Assess Risk)",
     "auditFile": "फाइल ऑडिट",
-    "noRecords": "राष्ट्रीय डेटाबेसमध्ये कोणतीही जुळणारी नोंद आढळली नाही."
+    "noRecords": "राष्ट्रीय डेटाबेसमध्ये कोणतीही जुळणारी नोंद आढळली नाही.",
+    "deepAudit": "सखोल ऑडिट (Deep Audit)"
   },
   "detail": {
     "breadcrumbProjects": "प्रकल्प",
@@ -303,7 +314,7 @@ export default {
     "dbtEscrow": "डीबीटी एस्क्रो",
     "dossierFor": "प्रकल्प डॉसियर:",
     "state": "राज्य",
-    "statutoryStage": "सध्याचा वैधानिक टप्पा",
+    "statutoryStage": "वैधानिक टप्पा (Statutory Stage)",
     "modalPrototypeDraft": "प्रारूप आदेश (प्रोटोटाइप)",
     "modalSimulationMode": "सिम्युलेशन मोड • कायदेशीरदृष्ट्या बंधनकारक नाही",
     "modalTitle": "प्रारूप डीसी आदेश / प्रशासकीय निर्देश",
@@ -1256,5 +1267,155 @@ export default {
       "example": "नवीन बिल्ल्यासह दिसणारी न वाचलेली सूचना.",
       "modelUsage": "वापरकर्ता सूचना ट्रॅकिंग."
     }
+  },
+  "tts": {
+    "read": "ऐका",
+    "read_aloud": "मोठ्याने ऐका",
+    "read_aria": "मूल्यांकन मोठ्याने ऐका",
+    "pause": "थांबवा",
+    "resume": "पुढे सुरू ठेवा",
+    "stop": "बंद करा",
+    "stop_reading": "वाचन बंद करा",
+    "stop_aria": "वाचन थांबवा"
+  },
+  "stages": {
+    "Sec 19 Declaration": "कलम 19 घोषणा (Sec 19 Declaration)",
+    "Compensation Award": "भरपाई निवाडा (Compensation Award Sec 23)",
+    "Joint Survey 3A": "संयुक्त पाहणी 3A (Joint Survey 3A)",
+    "Notification": "प्राथमिक अधिसूचना (Notification Sec 11/3A)",
+    "Rehabilitation": "पुनर्वसन आणि पुनर्वसाहत (R&R)",
+    "Valuation": "जमीन व मालमत्ता मूल्यांकन (Valuation)",
+    "Survey": "भूकर व संयुक्त पाहणी (Survey)",
+    "Compensation": "भरपाई निश्चिती व एस्क्रो (Compensation)",
+    "Possession": "प्रत्यक्ष ताबा व आरओडब्ल्यू (Possession)"
+  },
+  "factors": {
+    "documents_pending": "प्रलंबित कागदपत्रे (Documents Pending)",
+    "documents_required": "आवश्यक कागदपत्रे (Documents Required)",
+    "documentation_completion_pct": "कागदपत्र पूर्णता (Documentation Completion %)",
+    "compensation_pending_cases": "प्रलंबित भरपाई प्रकरणे (Compensation Pending Cases)",
+    "compensation_pending_amount": "प्रलंबित भरपाई रक्कम (Compensation Pending Amount)",
+    "compensation_total_amount": "एकूण भरपाई रक्कम (Compensation Total Amount)",
+    "compensation_completion_pct": "भरपाई पूर्णता प्रमाण (Compensation Completion %)",
+    "pending_objections": "प्रलंबित हरकती (Pending Objections)",
+    "active_legal_disputes": "सक्रिय कायदेशीर वाद (Active Legal Disputes)",
+    "ownership_disputes": "मालकी हक्क वाद (Ownership Disputes)",
+    "court_stay_cases": "न्यायालयीन स्थगिती प्रकरणे (Court Stay Cases)",
+    "approvals_pending": "प्रलंबित मंजुऱ्या (Approvals Pending)",
+    "overdue_approvals": "मुदत संपलेल्या मंजुऱ्या (Overdue Approvals)",
+    "avg_approval_delay_days": "सरासरी मंजुरी विलंब दिवस (Avg Approval Delay Days)",
+    "rr_pending_cases": "पुनर्वसन प्रलंबित प्रकरणे (R&R Pending Cases)",
+    "rr_completion_pct": "पुनर्वसन पूर्णता प्रमाण (R&R Completion %)",
+    "possession_pending_parcels": "ताबा प्रलंबित भूखंड (Possession Pending Parcels)",
+    "parcels_pending": "प्रलंबित भूखंड (Parcels Pending)",
+    "acquisition_progress_pct": "संपादन प्रगती (Acquisition Progress %)",
+    "acquisition_velocity_pct_per_30d": "संपादन वेग (Acquisition Velocity)",
+    "schedule_variance_days": "वेळापत्रक विचलन दिवस (Schedule Variance Days)",
+    "milestones_overdue": "मुदत संपलेले टप्पे (Milestones Overdue)",
+    "pending_stakeholder_actions": "प्रलंबित भागधारक कृती (Pending Stakeholder Actions)",
+    "avg_stakeholder_response_days": "सरासरी भागधारक प्रतिसाद दिवस (Avg Stakeholder Response Days)",
+    "stakeholder_responsiveness_score": "भागधारक प्रतिसादक्षमता गुण (Stakeholder Responsiveness Score)",
+    "complexity_score": "गुंतागुंत निर्देशांक (Complexity Score)",
+    "planned_duration_days": "नियोजित कालावधी दिवस (Planned Duration Days)",
+    "affected_families": "बाधित कुटुंबे (Affected Families)",
+    "total_parcels": "एकूण भूखंड (Total Parcels)",
+    "historical_avg_delay_days": "ऐतिहासिक सरासरी विलंब दिवस (Historical Avg Delay Days)",
+    "project_type_highway": "प्रकल्प प्रकार: महामार्ग (Highway)",
+    "project_type_railway": "प्रकल्प प्रकार: रेल्वे (Railway)",
+    "land_type_agricultural": "जमीन वर्गीकरण: शेतजमीन (Agricultural)",
+    "priority_critical": "प्राधान्य स्तर: अति-गंभीर (Critical)",
+    "priority_high": "प्राधान्य स्तर: उच्च (High)"
+  },
+  "recommendations": {
+    "compensation_pending_cases": "न सुटलेल्या भरपाई प्रकरणांना प्राधान्य द्या आणि वाटप जलद करा.",
+    "compensation_pending_amount": "थकबाकी भरपाई निधीचे पुनरावलोकन करा आणि पेमेंटमधील अडचणी दूर करा.",
+    "compensation_total_amount": "एकूण मंजूर भरपाई वाटप आणि वितरण वेळापत्रकाचे पुनरावलोकन करा.",
+    "compensation_completion_pct": "अपूर्ण भरपाई प्रक्रियेचे पुनरावलोकन करा आणि उर्वरित प्रकरणांना प्राधान्य द्या.",
+    "pending_objections": "न सुटलेल्या हरकतींचे पुनरावलोकन करा आणि संपादनात अडथळा आणणाऱ्यांना प्राधान्य द्या.",
+    "active_legal_disputes": "न सुटलेले कायदेशीर वाद वरिष्ठ स्तरावर पाठवा आणि संपादनात अडथळा आणणारी प्रकरणे ओळखा.",
+    "ownership_disputes": "मालकी हक्क पडताळणी आणि वादग्रस्त शीर्षक निवारणाला प्राधान्य द्या.",
+    "court_stay_cases": "न्यायालयीन स्थगिती प्रकरणांचा स्वतंत्रपणे मागोवा घ्या आणि कायदेशीर निवारणाचा समन्वय साधा.",
+    "documents_pending": "प्रलंबित जमीन व मालकी हक्क कागदपत्रांच्या पडताळणीला प्राधान्य द्या.",
+    "documentation_completion_pct": "कागदपत्र पडताळणी जलद करा आणि गहाळ कागदपत्रांचे निवारण करा.",
+    "documents_required": "प्रकल्पाच्या कागदपत्रांच्या आवश्यकतांचे आणि पडताळणी कार्यभाराचे पुनरावलोकन करा.",
+    "approvals_pending": "जबाबदार प्राधिकरणाकडे प्रलंबित मंजुऱ्या त्वरित पाठवा.",
+    "overdue_approvals": "मुदत संपलेल्या मंजुऱ्या वरिष्ठ स्तरावर पाठवा आणि स्पष्ट निवारण मुदत निश्चित करा.",
+    "avg_approval_delay_days": "विलंबित मंजुरी कार्यप्रवाहाचे पुनरावलोकन करा आणि संबंधित प्राधिकरणांशी समन्वय साधा.",
+    "rr_pending_cases": "पुनर्वसन आणि पुनर्वसाहत (R&R) प्रकरणांना प्राधान्य द्या.",
+    "rr_completion_pct": "थकबाकी पुनर्वसन आणि पुनर्वसाहत कृतींना गती द्या.",
+    "possession_pending_parcels": "ताब्यात अडथळा आणणारे भूखंड ओळखा आणि त्यांच्या निवारणाला प्राधान्य द्या.",
+    "parcels_pending": "प्रलंबित संपादन भूखंड ओळखा आणि त्यांच्या वैयक्तिक अडचणी दूर करा.",
+    "acquisition_progress_pct": "नियोजित प्रकल्प वेळापत्रकानुसार संपादन प्रगतीचे पुनरावलोकन करा.",
+    "acquisition_velocity_pct_per_30d": "संथ संपादन वेगाची चौकशी करा आणि प्रक्रियेतील अलीकडील अडथळे ओळखा.",
+    "schedule_variance_days": "क्रिटिकल पाथचे पुनरावलोकन करा आणि मुदत संपलेले टप्पे पूर्ण करा.",
+    "milestones_overdue": "मुदत संपलेल्या टप्प्यांचे पुनरावलोकन करा आणि सुधारात्मक कृती नियुक्त करा.",
+    "pending_stakeholder_actions": "प्रलंबित भागधारक कृतींचा पाठपुरावा करा आणि प्रतिसाद मुदत निश्चित करा.",
+    "avg_stakeholder_response_days": "संथ भागधारक प्रतिसादांचा पाठपुरावा करा आणि निवारण मुदत निश्चित करा.",
+    "stakeholder_responsiveness_score": "भागधारक समन्वय आणि थकबाकी प्रतिसादांचे पुनरावलोकन करा.",
+    "complexity_score": "प्रकल्पाच्या एकूण गुंतागुंतीमुळे अधिक बारकाईने निरीक्षण लागू करा.",
+    "planned_duration_days": "प्रकल्प वेळापत्रक त्याच्या गुंतागुंतीचे पुरेसे प्रतिबिंब दर्शवते का याचे पुनरावलोकन करा.",
+    "affected_families": "बाधित कुटुंबांच्या संख्येचा विचार करून अतिरिक्त समन्वयाचा विचार करा.",
+    "total_parcels": "भूखंड-स्तरीय संपादन नियोजन आणि थकबाकी प्रकरणांचे पुनरावलोकन करा.",
+    "historical_avg_delay_days": "प्रकल्प जोखीम मूल्यांकनाचा भाग म्हणून या घटकाचे पुनरावलोकन करा.",
+    "project_type_highway": "महामार्ग कॉरिडॉरवरील रस्ते पायाभूत सुविधा संपादन अडचणींचे पुनरावलोकन करा.",
+    "project_type_railway": "रेषीय कॉरिडॉर मंजुरीसाठी रेल्वे अधिकाऱ्यांशी समन्वय साधा.",
+    "land_type_agricultural": "कलम 11 अंतर्गत पीक चक्र आणि शेतकरी सल्लामसलत वेळापत्रकाचे पुनरावलोकन करा.",
+    "priority_critical": "सर्वोच्च स्तरावरील प्रशासकीय देखरेख आणि जलद आंतर-विभागीय मंजुऱ्या लागू करा.",
+    "priority_high": "वैधानिक अडथळे दूर करण्यासाठी द्विसाप्ताहिक आढावा बैठका घ्या.",
+    "default": "प्रकल्प जोखीम मूल्यांकनाचा भाग म्हणून या घटकाचे पुनरावलोकन करा.",
+    "reducing_risk": "हा घटक सध्या अंदाजित विलंब जोखीम कमी करत आहे."
+  },
+  "notifications": {
+    "title": "प्रणाली सूचना",
+    "unread": "न वाचलेले",
+    "allCaughtUp": "सर्व वाचले गेले आहेत",
+    "subtitle": "भूमी सखा द्वारे व्युत्पन्न केलेले ॲप्लिकेशन अलर्ट, अनुमान टप्पे आणि वैधानिक मर्यादा सूचना.",
+    "markAllRead": "सर्व वाचलेले म्हणून चिन्हांकित करा",
+    "resetDemoAlerts": "डेमो अलर्ट रीसेट करा",
+    "filterAll": "सर्व",
+    "filterUnread": "न वाचलेले",
+    "severity": "तीव्रता",
+    "categoriesLabel": "श्रेण्या",
+    "categories": {
+      "Risk Alert": "धोका इशारा",
+      "Engine": "इंजिन",
+      "Officer Attention": "अधिकारी लक्ष",
+      "System": "प्रणाली"
+    },
+    "readState": "वाचलेली स्थिती",
+    "noNotifications": "दर्शवण्यासाठी कोणत्याही सूचना नाहीत",
+    "noNotificationsDesc": "या फिल्टर अंतर्गत सध्या कोणत्याही सूचना नाहीत.",
+    "newTag": "नवीन",
+    "markAsUnread": "न वाचलेले म्हणून चिन्हांकित करा",
+    "markAsRead": "वाचलेले म्हणून चिन्हांकित करा",
+    "timestamps": {
+      "15 mins ago": "15 मिनिटांपूर्वी",
+      "1 hour ago": "1 तासापूर्वी",
+      "3 hours ago": "3 तासांपूर्वी",
+      "Today, 09:30 AM": "आज, 09:30 AM"
+    },
+    "items": {
+      "notif-crit-1": {
+        "title": "सध्याच्या मूल्यांकनात गंभीर विलंब जोखीम आढळली",
+        "summary": "दिल्ली-अमृतसर एक्सप्रेसवे (Pkg 4) चे 84.6% विलंब संभाव्यतेसह मूल्यांकन केले गेले, ज्यासाठी तातडीने कलम 19 हस्तक्षेपाची आवश्यकता आहे.",
+        "actionLabel": "मूल्यांकन तपासा"
+      },
+      "notif-engine-2": {
+        "title": "बॅकएंड अंदाज इंजिन कनेक्ट केले आहे",
+        "summary": "थेट XGBoost अनुमानासाठी 76 इंजिनिअर केलेल्या भू-अभिलेख वैशिष्ट्यांसह FastAPI सेवा कनेक्ट केली आहे.",
+        "actionLabel": "डॅशबोर्ड पहा"
+      },
+      "notif-atten-3": {
+        "title": "मूल्यांकनात अधिकाऱ्यांच्या लक्ष देण्याची आवश्यकता असलेले घटक समाविष्ट आहेत",
+        "summary": "वेस्टर्न फ्रेट कॉरिडॉरमधील 18 उच्च अडथळ्यांच्या भूखंड प्रकरणांना दस्तऐवज अनुशेष पुनरावलोकनासाठी चिन्हांकित केले गेले.",
+        "actionLabel": "घटकांचे पुनरावलोकन करा"
+      },
+      "notif-stat-4": {
+        "title": "जोखीम मूल्यांकन पाइपलाइन सुरू केली",
+        "summary": "142 देखरेखीखालील पायाभूत सुविधा कॉरिडॉरसह राष्ट्रीय भू-अभिलेख मॅट्रिक्स समक्रमित केले.",
+        "actionLabel": "प्रकल्प निर्देशिका"
+      }
+    }
   }
 };
+

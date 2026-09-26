@@ -74,7 +74,7 @@ export function renderNotificationsView(container, onStateChange) {
               ${renderInfoButton('notif_severity')}
             </div>
             <div class="flex items-center gap-1">
-              <span>${t('notifications.categories', 'Categories')}</span>
+              <span>${t('notifications.categoriesLabel', 'Categories')}</span>
               ${renderInfoButton('notif_categories')}
             </div>
             <div class="flex items-center gap-1">
@@ -198,7 +198,7 @@ export function renderNotificationsView(container, onStateChange) {
         if (notif) {
           const icon = btn.querySelector('.material-symbols-outlined');
           tts.speak(
-            `${notif.category} alert. ${notif.title}. ${notif.summary}`,
+            `${notif.category}. ${notif.title}. ${notif.summary}`,
             i18n.getLanguage(),
             (state) => {
               if (icon) icon.textContent = state === 'speaking' ? 'pause' : 'volume_up';

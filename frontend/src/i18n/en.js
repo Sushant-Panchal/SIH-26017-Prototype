@@ -1,3 +1,7 @@
+/**
+ * Bhoomi Sakha - Internationalization Dictionary
+ */
+
 export default {
   "header": {
     "platformName": "Bhoomi Sakha",
@@ -238,19 +242,25 @@ export default {
     "inferenceUnavailable": "Inference Unavailable",
     "retryAssessment": "Retry Assessment",
     "readAloudIntro": "Bhoomi Sakha assessment outcome.",
-    "labelCurrentStage": "Current Statutory Stage"
+    "labelCurrentStage": "Current Statutory Stage",
+    "riskForecast": "Risk Forecast",
+    "delayProb": "Delay Prob",
+    "predictedOutcome": "Predicted Outcome",
+    "awaitingInput": "Awaiting Telemetry Input...",
+    "statutoryNotice": "Notice: Inference updates in real time based on active inputs.",
+    "serviceUnavailableMsg": "Prediction service is temporarily unavailable. Please try again."
   },
   "projects": {
     "title": "National Projects Directory",
     "subtitle": "Explore active infrastructure corridors, cadastral verification stages, and predicted delay exposures across all state jurisdictions.",
     "newAssessment": "New Project Assessment",
-    "filterSector": "Filter By Sector",
+    "filterSector": "Filter by Sector",
     "allSectors": "All Sectors (Highway, Rail, Power, Metro)",
     "filterRisk": "Risk Tier",
     "allRisks": "All Risk Tiers",
     "searchPlaceholder": "Filter by name, ID, or district...",
     "colId": "Project ID",
-    "colName": "Name & Corridor",
+    "colName": "Name & Sector",
     "colDistrict": "State & District",
     "colStage": "Statutory Stage",
     "colProgress": "Acquisition Progress",
@@ -259,7 +269,8 @@ export default {
     "colAction": "Actions",
     "assessRisk": "Assess Risk",
     "auditFile": "Audit File",
-    "noRecords": "No matching records found in national database."
+    "noRecords": "No matching records found in national database.",
+    "deepAudit": "Deep Audit"
   },
   "detail": {
     "breadcrumbProjects": "Projects",
@@ -303,7 +314,7 @@ export default {
     "dbtEscrow": "DBT Escrow",
     "dossierFor": "Project dossier for",
     "state": "State",
-    "statutoryStage": "Current statutory stage",
+    "statutoryStage": "Statutory Stage",
     "modalPrototypeDraft": "Prototype Draft",
     "modalSimulationMode": "Simulation Mode • Not Legally Enforceable",
     "modalTitle": "Draft DC Order / Administrative Directive",
@@ -1256,5 +1267,155 @@ export default {
       "example": "Unread alert displayed with glowing indicator and \"New\" badge.",
       "modelUsage": "User notification tracking."
     }
+  },
+  "tts": {
+    "read": "Read",
+    "read_aloud": "Read aloud",
+    "read_aria": "Read assessment aloud",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop",
+    "stop_reading": "Stop reading",
+    "stop_aria": "Stop reading aloud"
+  },
+  "stages": {
+    "Sec 19 Declaration": "Sec 19 Declaration",
+    "Compensation Award": "Compensation Award (Sec 23)",
+    "Joint Survey 3A": "Joint Survey 3A",
+    "Notification": "Notification (Sec 11/3A)",
+    "Rehabilitation": "Rehabilitation & Resettlement (R&R)",
+    "Valuation": "Land & Asset Valuation",
+    "Survey": "Cadastral & Joint Survey",
+    "Compensation": "Compensation Determination & Escrow",
+    "Possession": "Physical Possession & ROW"
+  },
+  "factors": {
+    "documents_pending": "Documents Pending",
+    "documents_required": "Documents Required",
+    "documentation_completion_pct": "Documentation Completion",
+    "compensation_pending_cases": "Compensation Pending Cases",
+    "compensation_pending_amount": "Compensation Pending Amount",
+    "compensation_total_amount": "Compensation Total Amount",
+    "compensation_completion_pct": "Compensation Completion",
+    "pending_objections": "Pending Objections",
+    "active_legal_disputes": "Active Legal Disputes",
+    "ownership_disputes": "Ownership Disputes",
+    "court_stay_cases": "Court Stay Cases",
+    "approvals_pending": "Approvals Pending",
+    "overdue_approvals": "Overdue Approvals",
+    "avg_approval_delay_days": "Avg Approval Delay Days",
+    "rr_pending_cases": "R&R Pending Cases",
+    "rr_completion_pct": "R&R Completion %",
+    "possession_pending_parcels": "Possession Pending Parcels",
+    "parcels_pending": "Parcels Pending",
+    "acquisition_progress_pct": "Acquisition Progress %",
+    "acquisition_velocity_pct_per_30d": "Acquisition Velocity",
+    "schedule_variance_days": "Schedule Variance Days",
+    "milestones_overdue": "Milestones Overdue",
+    "pending_stakeholder_actions": "Pending Stakeholder Actions",
+    "avg_stakeholder_response_days": "Avg Stakeholder Response Days",
+    "stakeholder_responsiveness_score": "Stakeholder Responsiveness Score",
+    "complexity_score": "Complexity Score",
+    "planned_duration_days": "Planned Duration Days",
+    "affected_families": "Affected Families",
+    "total_parcels": "Total Parcels",
+    "historical_avg_delay_days": "Historical Avg Delay Days",
+    "project_type_highway": "Project Type: Highway",
+    "project_type_railway": "Project Type: Railway",
+    "land_type_agricultural": "Land Classification: Agricultural",
+    "priority_critical": "Priority Tier: Critical",
+    "priority_high": "Priority Tier: High"
+  },
+  "recommendations": {
+    "compensation_pending_cases": "Prioritize unresolved compensation cases and accelerate disbursement.",
+    "compensation_pending_amount": "Review outstanding compensation funds and resolve payment bottlenecks.",
+    "compensation_total_amount": "Review total sanctioned compensation allocation and disbursement schedule.",
+    "compensation_completion_pct": "Review incomplete compensation processing and prioritize remaining cases.",
+    "pending_objections": "Review unresolved objections and prioritize those blocking acquisition.",
+    "active_legal_disputes": "Escalate unresolved legal disputes and identify cases blocking acquisition.",
+    "ownership_disputes": "Prioritize ownership verification and disputed-title resolution.",
+    "court_stay_cases": "Track court stay cases separately and coordinate legal resolution.",
+    "documents_pending": "Prioritize verification of pending land and ownership documents.",
+    "documentation_completion_pct": "Accelerate document verification and resolve missing documentation.",
+    "documents_required": "Review the project's documentation requirements and verification workload.",
+    "approvals_pending": "Escalate pending approvals to the responsible authority.",
+    "overdue_approvals": "Escalate overdue approvals and establish clear resolution deadlines.",
+    "avg_approval_delay_days": "Review delayed approval workflows and escalate slow authorities.",
+    "rr_pending_cases": "Prioritize rehabilitation and resettlement cases.",
+    "rr_completion_pct": "Accelerate outstanding rehabilitation and resettlement actions.",
+    "possession_pending_parcels": "Identify parcels blocking possession and prioritize their resolution.",
+    "parcels_pending": "Identify pending acquisition parcels and remove their individual bottlenecks.",
+    "acquisition_progress_pct": "Review acquisition progress against the planned project schedule.",
+    "acquisition_velocity_pct_per_30d": "Investigate low acquisition velocity and identify recent process bottlenecks.",
+    "schedule_variance_days": "Review the critical path and address overdue milestones.",
+    "milestones_overdue": "Review overdue milestones and assign corrective actions.",
+    "pending_stakeholder_actions": "Escalate pending stakeholder actions and establish response deadlines.",
+    "avg_stakeholder_response_days": "Escalate slow stakeholder responses and set resolution deadlines.",
+    "stakeholder_responsiveness_score": "Review stakeholder coordination and outstanding responses.",
+    "complexity_score": "Apply closer monitoring because of the project's overall complexity.",
+    "planned_duration_days": "Review whether the project schedule adequately reflects its complexity.",
+    "affected_families": "Consider additional coordination due to the scale of affected families.",
+    "total_parcels": "Review parcel-level acquisition planning and outstanding cases.",
+    "historical_avg_delay_days": "Review this factor as part of the project risk assessment.",
+    "project_type_highway": "Review road infrastructure acquisition bottlenecks along the highway corridor.",
+    "project_type_railway": "Coordinate with railway authorities for linear corridor clearance.",
+    "land_type_agricultural": "Review crop cycles and farmer consultation schedules under Section 11.",
+    "priority_critical": "Apply apex-level executive oversight and accelerated interdepartmental clearances.",
+    "priority_high": "Conduct bi-weekly review meetings to clear statutory roadblocks.",
+    "default": "Review this factor as part of the project risk assessment.",
+    "reducing_risk": "This factor is currently reducing the predicted delay risk."
+  },
+  "notifications": {
+    "title": "System Notifications",
+    "unread": "Unread",
+    "allCaughtUp": "All Caught Up",
+    "subtitle": "Application alerts, inference milestones, and statutory threshold notifications generated by Bhoomi Sakha.",
+    "markAllRead": "Mark All Read",
+    "resetDemoAlerts": "Reset Demo Alerts",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "severity": "Severity",
+    "categoriesLabel": "Categories",
+    "categories": {
+      "Risk Alert": "Risk Alert",
+      "Engine": "Engine",
+      "Officer Attention": "Officer Attention",
+      "System": "System"
+    },
+    "readState": "Read State",
+    "noNotifications": "No notifications to display",
+    "noNotificationsDesc": "There are currently no notifications under this filter.",
+    "newTag": "New",
+    "markAsUnread": "Mark as Unread",
+    "markAsRead": "Mark as Read",
+    "timestamps": {
+      "15 mins ago": "15 mins ago",
+      "1 hour ago": "1 hour ago",
+      "3 hours ago": "3 hours ago",
+      "Today, 09:30 AM": "Today, 09:30 AM"
+    },
+    "items": {
+      "notif-crit-1": {
+        "title": "Critical delay risk detected in current assessment",
+        "summary": "Delhi-Amritsar Expressway (Pkg 4) evaluated with 84.6% delay probability requiring urgent Section 19 intervention.",
+        "actionLabel": "Inspect Assessment"
+      },
+      "notif-engine-2": {
+        "title": "Backend prediction engine connected",
+        "summary": "FastAPI service connected with 76 engineered cadastral features ready for live XGBoost inference.",
+        "actionLabel": "View Dashboard"
+      },
+      "notif-atten-3": {
+        "title": "Assessment contains factors requiring officer attention",
+        "summary": "18 high-bottleneck parcel cases in Western Freight Corridor flagged for documentation backlog review.",
+        "actionLabel": "Review Factors"
+      },
+      "notif-stat-4": {
+        "title": "Risk assessment pipeline initialized",
+        "summary": "National Cadastral Matrix synchronized with 142 monitored infrastructure corridors.",
+        "actionLabel": "Projects Directory"
+      }
+    }
   }
 };
+

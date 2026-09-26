@@ -12,6 +12,7 @@ import {
 } from '../utils/risk.js';
 import { attachMicToInput } from '../utils/stt.js';
 import { renderInfoButton } from '../utils/infoModal.js';
+import { getLocalizedStage } from '../utils/localization.js';
 import { i18n, t } from '../i18n/index.js';
 
 export function renderProjectsView(container, onNavigateToAssessment, onNavigateToAudit) {
@@ -86,7 +87,7 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
                 </th>
                 <th class="py-3 px-space-md font-bold">
                   <div class="flex items-center gap-1">
-                    <span>${t('projects.colName', 'Name & Corridor')}</span>
+                    <span>${t('projects.colName', 'Name & Sector')}</span>
                     ${renderInfoButton('project_name_corridor')}
                   </div>
                 </th>
@@ -180,7 +181,7 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
           </td>
           <td class="py-space-md px-space-md text-on-surface-variant">${p.district}, ${p.state}</td>
           <td class="py-space-md px-space-md">
-            <span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-xs">${p.stage}</span>
+            <span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-xs">${getLocalizedStage(p.stage)}</span>
           </td>
           <td class="py-space-md px-space-md font-tabular-data">
             <div class="flex items-center gap-2">
@@ -200,7 +201,7 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
                 ${t('projects.assessRisk', 'Assess Risk')}
               </button>
               <button class="dir-audit-btn px-2 py-1 bg-surface-container text-on-surface rounded font-label-sm text-xs font-medium hover:bg-surface-container-high transition-colors" data-id="${p.id}" type="button">
-                ${t('projects.auditFile', 'Audit File')}
+                ${t('projects.deepAudit', 'Deep Audit')}
               </button>
             </div>
           </td>

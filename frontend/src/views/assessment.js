@@ -21,6 +21,12 @@ import {
 import { createReadAloudButton } from '../utils/tts.js';
 import { renderInfoButton } from '../utils/infoModal.js';
 import { createCustomSelect } from '../components/customSelect.js';
+import {
+  getLocalizedFactorName,
+  getLocalizedRecommendation,
+  getLocalizedValue,
+  getLocalizedStage,
+} from '../utils/localization.js';
 import { i18n, t } from '../i18n/index.js';
 
 let currentAssessmentState = {
@@ -83,7 +89,7 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
             <button class="preset-pill px-space-sm py-1.5 rounded bg-surface-container-high transition-colors text-left flex items-center justify-between gap-space-sm group ring-1 ring-secondary" data-preset="medium" type="button">
               <div class="flex flex-col truncate">
                 <span class="font-label-sm text-label-sm text-on-surface truncate font-semibold">Western Corridor</span>
-                <span class="font-label-sm text-[10px] text-secondary font-tabular-data font-bold">42.3% Baseline</span>
+                <span class="font-label-sm text-[10px] text-secondary font-tabular-data font-bold">42.3% ${t('risk.mediumTier', 'Baseline')}</span>
               </div>
               <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
             </button>
@@ -1104,17 +1110,20 @@ function renderResults(container, result) {
       driversContainer.innerHTML = drivers.map(driver => {
         const barWidthPct = Math.min(100, Math.max(15, (Math.abs(driver.contribution) / maxContrib) * 100));
         const barColor = driver.contribution > 0.4 ? 'bg-error' : 'bg-secondary-container';
+        const factorTitle = getLocalizedFactorName(driver);
+        const factorValue = getLocalizedValue(driver.value, driver.feature);
+        const recommendation = getLocalizedRecommendation(driver);
         return `
           <div class="flex flex-col gap-1 border-b border-surface-container-high/40 pb-2 last:border-none">
             <div class="flex items-center justify-between font-label-sm text-label-sm">
-              <span class="text-on-surface font-semibold">${driver.factor}: <span class="font-bold text-on-surface font-tabular-data">${driver.value ?? '--'}</span></span>
+              <span class="text-on-surface font-semibold">${factorTitle}: <span class="font-bold text-on-surface font-tabular-data">${factorValue}</span></span>
               <span class="font-tabular-data font-bold text-error">+${driver.contribution.toFixed(4)}</span>
             </div>
             <div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden">
               <div class="${barColor} h-full rounded-full transition-all duration-700" style="width: ${barWidthPct.toFixed(0)}%;"></div>
             </div>
             <span class="font-body-sm text-[11px] text-on-surface-variant italic">
-              <strong>${t('assessment.action', 'Action:')}</strong> ${driver.recommendation || 'Prioritize verification and monitoring.'}
+              <strong>${t('assessment.action', 'Action:')}</strong> ${recommendation}
             </span>
           </div>
         `;
@@ -1136,10 +1145,12 @@ function renderResults(container, result) {
       const maxContrib = Math.max(...reducing.map(d => Math.abs(d.contribution)), 0.1);
       reducingContainer.innerHTML = reducing.map(factor => {
         const barWidthPct = Math.min(100, Math.max(15, (Math.abs(factor.contribution) / maxContrib) * 100));
+        const factorTitle = getLocalizedFactorName(factor);
+        const factorValue = getLocalizedValue(factor.value, factor.feature);
         return `
           <div class="flex flex-col gap-1 border-b border-surface-container-high/40 pb-2 last:border-none">
             <div class="flex items-center justify-between font-label-sm text-label-sm">
-              <span class="text-on-surface font-medium">${factor.factor}: <span class="font-bold text-on-surface font-tabular-data">${factor.value ?? '--'}</span></span>
+              <span class="text-on-surface font-medium">${factorTitle}: <span class="font-bold text-on-surface font-tabular-data">${factorValue}</span></span>
               <span class="font-tabular-data font-semibold text-emerald-600">${factor.contribution.toFixed(4)}</span>
             </div>
             <div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden">
@@ -1159,12 +1170,14 @@ function renderResults(container, result) {
       directivesContainer.innerHTML = drivers.slice(0, 2).map((driver, idx) => {
         const badgeTag = idx === 0 ? t('assessment.p1Priority', 'P1 PRIORITY') : t('assessment.p2Priority', 'P2 PRIORITY');
         const badgeStyle = idx === 0 ? 'bg-error text-on-error' : 'bg-secondary text-on-secondary';
+        const factorTitle = getLocalizedFactorName(driver);
+        const recommendation = getLocalizedRecommendation(driver);
         return `
           <div class="p-space-sm bg-surface-container-low rounded-lg flex items-start gap-space-sm border border-outline-variant/30">
             <span class="px-1.5 py-0.5 rounded ${badgeStyle} font-label-sm text-[10px] font-bold shrink-0 mt-0.5">${badgeTag}</span>
             <div class="flex flex-col">
-              <span class="font-label-sm text-label-sm font-bold text-on-surface">${driver.factor} ${t('assessment.resolution', 'Resolution')}</span>
-              <p class="font-body-sm text-[12px] text-on-surface-variant mt-0.5">${driver.recommendation}</p>
+              <span class="font-label-sm text-label-sm font-bold text-on-surface">${factorTitle} — ${t('assessment.resolution', 'Resolution')}</span>
+              <p class="font-body-sm text-[12px] text-on-surface-variant mt-0.5">${recommendation}</p>
             </div>
           </div>
         `;
@@ -1183,7 +1196,7 @@ function showPredictionError(container, message) {
   const driversContainer = container.querySelector('#riskIncreasingContainer');
   const safeMessage = message && !message.includes('uvicorn') 
     ? message 
-    : 'Prediction service is temporarily unavailable. Please try again.';
+    : t('assessment.serviceUnavailableMsg', 'Prediction service is temporarily unavailable. Please try again.');
 
   if (driversContainer) {
     driversContainer.innerHTML = `

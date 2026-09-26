@@ -81,6 +81,7 @@ class NotificationStore {
       summary: t(`notifications.items.${n.id}.summary`, n.summary),
       category: t(`notifications.categories.${n.category}`, n.category),
       actionLabel: t(`notifications.items.${n.id}.actionLabel`, n.actionLabel),
+      timestamp: t(`notifications.timestamps.${n.timestamp}`, n.timestamp),
       isRead: readIds.has(n.id),
     }));
   }

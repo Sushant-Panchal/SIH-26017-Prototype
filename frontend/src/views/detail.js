@@ -14,6 +14,7 @@ import {
 } from '../utils/risk.js';
 import { createReadAloudButton } from '../utils/tts.js';
 import { renderInfoButton } from '../utils/infoModal.js';
+import { getLocalizedStage } from '../utils/localization.js';
 import { i18n, t } from '../i18n/index.js';
 
 export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavigateToAssessment) {
@@ -66,7 +67,7 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
               </span>
               <span class="px-space-xs py-0.5 bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm rounded flex items-center gap-1">
                 <span class="material-symbols-outlined text-[13px]">gavel</span>
-                ${t('detail.stage', 'Stage')}: ${project.stage}
+                ${t('detail.stage', 'Stage')}: ${getLocalizedStage(project.stage)}
               </span>
             </div>
             <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold">
@@ -292,7 +293,7 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
   const readSlot = container.querySelector('#detailReadAloudSlot');
   if (readSlot) {
     const readBtn = createReadAloudButton(
-      () => `${t('detail.dossierFor', 'Project dossier for')} ${project.name}, ${t('projects.colId', 'Project ID')} ${project.id}. ${t('detail.state', 'State')}: ${project.state}, ${t('detail.district', 'District')}: ${project.district}. ${t('detail.statutoryStage', 'Current statutory stage')}: ${project.stage}. ${t('detail.overallProgress', 'Progress')}: ${project.progressPct}%. ${t('detail.modelDelayProb', 'Predicted delay risk')}: ${project.delayProbability}%, ${t('detail.riskTier', 'Risk Tier')}: ${getRiskLevelLabel(riskLevel)}. ${getRiskSummary(riskLevel)}`,
+      () => `${t('detail.dossierFor', 'Project dossier for')} ${project.name}, ${t('projects.colId', 'Project ID')} ${project.id}. ${t('detail.state', 'State')}: ${project.state}, ${t('detail.district', 'District')}: ${project.district}. ${t('detail.statutoryStage', 'Current statutory stage')}: ${getLocalizedStage(project.stage)}. ${t('detail.overallProgress', 'Progress')}: ${project.progressPct}%. ${t('detail.modelDelayProb', 'Predicted delay risk')}: ${project.delayProbability}%, ${t('detail.riskTier', 'Risk Tier')}: ${getRiskLevelLabel(riskLevel)}. ${getRiskSummary(riskLevel)}`,
       () => i18n.getLanguage()
     );
     readSlot.appendChild(readBtn);
@@ -349,7 +350,7 @@ ${t('detail.modalDate', 'Date')}: ${today}
 
 SUB: ${t('detail.modalMemoSub', 'Pre-emptive Administrative Acceleration Directive under RFCTLARR Framework')}
 REF: ${t('projects.colId', 'Project ID')}: ${project.id} | ${project.name} (${project.sector})
-     ${t('detail.statutoryStage', 'Current Statutory Stage')}: ${project.stage} | ${t('detail.overallProgress', 'Current Physical Progress')}: ${project.progressPct}%
+     ${t('detail.statutoryStage', 'Current Statutory Stage')}: ${getLocalizedStage(project.stage)} | ${t('detail.overallProgress', 'Current Physical Progress')}: ${project.progressPct}%
 
 ${t('detail.modalTeleFindings', '1. TELEMETRY & PREDICTIVE AUDIT FINDINGS:')}
    - ${t('detail.modalTargetArea', 'Total Target Land Area')}: ${values.land_area_hectares || 100} Hectares
@@ -411,7 +412,7 @@ ${t('detail.modalDisclaimer', 'This document is a prototype draft generated auto
           </div>
           <div class="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
             <span class="text-on-surface-variant block uppercase font-medium">${t('detail.stage', 'Stage')}</span>
-            <span class="font-bold text-on-surface truncate block">${project.stage}</span>
+            <span class="font-bold text-on-surface truncate block">${getLocalizedStage(project.stage)}</span>
           </div>
           <div class="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
             <span class="text-on-surface-variant block uppercase font-medium">${t('detail.modalAreaFamilies', 'Area / Families')}</span>
