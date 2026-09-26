@@ -3,7 +3,7 @@
  * Handles communication with the FastAPI backend.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
 
 export class ApiError extends Error {
   constructor(message, status = null, details = null) {

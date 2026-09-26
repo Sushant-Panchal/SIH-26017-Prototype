@@ -9,6 +9,8 @@
  * - CRITICAL: probability >= 80% (>= 0.80)
  */
 
+import { t } from '../i18n/index.js';
+
 /**
  * Normalizes input probability to 0..1 scale.
  * Handles inputs given as 0..1 (e.g. 0.8729) or 0..100 (e.g. 87.29).
@@ -37,14 +39,14 @@ export function getRiskWording(levelOrProb) {
   const level = typeof levelOrProb === 'string' ? levelOrProb.toUpperCase() : getRiskLevel(levelOrProb);
   switch (level) {
     case 'CRITICAL':
-      return 'Critical predicted delay risk';
+      return t('risk.criticalWording', 'Critical predicted delay risk');
     case 'HIGH':
-      return 'High predicted delay risk';
+      return t('risk.highWording', 'High predicted delay risk');
     case 'MEDIUM':
-      return 'Moderate predicted delay risk';
+      return t('risk.mediumWording', 'Moderate predicted delay risk');
     case 'LOW':
     default:
-      return 'Low predicted delay risk';
+      return t('risk.lowWording', 'Low predicted delay risk');
   }
 }
 
@@ -55,14 +57,14 @@ export function getRiskSummary(levelOrProb) {
   const level = typeof levelOrProb === 'string' ? levelOrProb.toUpperCase() : getRiskLevel(levelOrProb);
   switch (level) {
     case 'CRITICAL':
-      return 'Critical predicted delay risk based on the current project snapshot.';
+      return t('risk.criticalSummary', 'Critical predicted delay risk based on the current project snapshot.');
     case 'HIGH':
-      return 'High predicted delay risk based on the current project snapshot.';
+      return t('risk.highSummary', 'High predicted delay risk based on the current project snapshot.');
     case 'MEDIUM':
-      return 'Moderate predicted delay risk based on the current project snapshot.';
+      return t('risk.mediumSummary', 'Moderate predicted delay risk based on the current project snapshot.');
     case 'LOW':
     default:
-      return 'Low predicted delay risk based on the current project snapshot.';
+      return t('risk.lowSummary', 'Low predicted delay risk based on the current project snapshot.');
   }
 }
 
@@ -73,14 +75,50 @@ export function getRiskThresholdLabel(levelOrProb) {
   const level = typeof levelOrProb === 'string' ? levelOrProb.toUpperCase() : getRiskLevel(levelOrProb);
   switch (level) {
     case 'CRITICAL':
-      return 'Risk Level: CRITICAL (Threshold ≥ 80%)';
+      return t('risk.criticalThreshold', 'Risk Level: CRITICAL (Threshold ≥ 80%)');
     case 'HIGH':
-      return 'Risk Level: HIGH (Threshold: 60% – 79.9%)';
+      return t('risk.highThreshold', 'Risk Level: HIGH (Threshold: 60% – 79.9%)');
     case 'MEDIUM':
-      return 'Risk Level: MEDIUM (Threshold: 40% – 59.9%)';
+      return t('risk.mediumThreshold', 'Risk Level: MEDIUM (Threshold: 40% – 59.9%)');
     case 'LOW':
     default:
-      return 'Risk Level: LOW (Threshold < 40%)';
+      return t('risk.lowThreshold', 'Risk Level: LOW (Threshold < 40%)');
+  }
+}
+
+/**
+ * Translated single-word risk level label (e.g. LOW / कम / कमी).
+ */
+export function getRiskLevelLabel(levelOrProb) {
+  const level = typeof levelOrProb === 'string' ? levelOrProb.toUpperCase() : getRiskLevel(levelOrProb);
+  switch (level) {
+    case 'CRITICAL':
+      return t('risk.critical', 'CRITICAL');
+    case 'HIGH':
+      return t('risk.high', 'HIGH');
+    case 'MEDIUM':
+      return t('risk.medium', 'MEDIUM');
+    case 'LOW':
+    default:
+      return t('risk.low', 'LOW');
+  }
+}
+
+/**
+ * Translated risk badge label (e.g. CRITICAL RISK / अति-गंभीर जोखिम).
+ */
+export function getRiskBadgeLabel(levelOrProb) {
+  const level = typeof levelOrProb === 'string' ? levelOrProb.toUpperCase() : getRiskLevel(levelOrProb);
+  switch (level) {
+    case 'CRITICAL':
+      return t('risk.criticalRisk', 'CRITICAL RISK');
+    case 'HIGH':
+      return t('risk.highRisk', 'HIGH RISK');
+    case 'MEDIUM':
+      return t('risk.mediumRisk', 'MEDIUM RISK');
+    case 'LOW':
+    default:
+      return t('risk.lowRisk', 'LOW RISK');
   }
 }
 

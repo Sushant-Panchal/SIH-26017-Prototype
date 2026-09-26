@@ -4,6 +4,8 @@
  * Supports Read, Pause, Resume, Stop, and language-matched voice selection.
  */
 
+import { i18n, t } from '../i18n/index.js';
+
 class SpeechSynthesizer {
   constructor() {
     this.supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -25,11 +27,11 @@ class SpeechSynthesizer {
     this.voices = window.speechSynthesis.getVoices();
   }
 
-  getBestVoice(langCode = 'en') {
+  getBestVoice(langCode = null) {
     if (!this.voices || this.voices.length === 0) {
       this.loadVoices();
     }
-    const target = langCode.toLowerCase();
+    const target = (langCode || i18n.getLanguage()).toLowerCase();
     
     // Look for regional locale matches
     const langMap = {
@@ -41,7 +43,10 @@ class SpeechSynthesizer {
     const searchList = langMap[target] || [target];
 
     for (const code of searchList) {
-      const match = this.voices.find(v => v.lang.toLowerCase() === code.toLowerCase() || v.lang.toLowerCase().startsWith(code.toLowerCase()));
+      const match = this.voices.find(v => {
+        const vl = v.lang.toLowerCase().replace('_', '-');
+        return vl === code.toLowerCase() || vl.startsWith(code.toLowerCase());
+      });
       if (match) return match;
     }
 
@@ -49,7 +54,7 @@ class SpeechSynthesizer {
     return this.voices[0] || null;
   }
 
-  speak(text, langCode = 'en', onStateChange = null) {
+  speak(text, langCode = null, onStateChange = null) {
     if (!this.supported) {
       console.warn('Speech synthesis is not supported in this browser environment.');
       return false;
@@ -60,12 +65,20 @@ class SpeechSynthesizer {
     // Stop existing speech
     this.stop();
 
+    const activeLang = langCode || i18n.getLanguage();
     this.activeListener = onStateChange;
     const utterance = new SpeechSynthesisUtterance(text);
-    const voice = this.getBestVoice(langCode);
+    const voice = this.getBestVoice(activeLang);
+    
+    const localeMap = {
+      en: 'en-IN',
+      hi: 'hi-IN',
+      mr: 'mr-IN',
+    };
+    utterance.lang = voice?.lang || localeMap[activeLang] || 'en-IN';
+
     if (voice) {
       utterance.voice = voice;
-      utterance.lang = voice.lang;
     }
 
     utterance.rate = 0.95; // Clear government audit cadence
@@ -130,7 +143,7 @@ class SpeechSynthesizer {
     if (this.activeListener) this.activeListener('idle');
   }
 
-  toggle(text, langCode = 'en', onStateChange = null) {
+  toggle(text, langCode = null, onStateChange = null) {
     if (this.state === 'speaking') {
       this.pause();
     } else if (this.state === 'paused') {
@@ -153,24 +166,24 @@ export function createReadAloudButton(getTextFn, getLangFn) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-xs font-semibold flex items-center gap-1 transition-all border border-outline-variant/30 shadow-sm';
-  btn.setAttribute('aria-label', 'Read assessment aloud');
-  btn.title = 'Read aloud';
+  btn.setAttribute('aria-label', t('tts.read_aria', 'Read assessment aloud'));
+  btn.title = t('tts.read_aloud', 'Read aloud');
   btn.innerHTML = `
     <span class="material-symbols-outlined text-[16px] text-secondary">volume_up</span>
-    <span class="btn-label">Read</span>
+    <span class="btn-label">${t('tts.read', 'Read')}</span>
   `;
 
   const stopBtn = document.createElement('button');
   stopBtn.type = 'button';
   stopBtn.className = 'hidden p-1 rounded bg-surface-container hover:bg-error/10 text-error font-label-sm text-xs transition-all border border-outline-variant/30';
-  stopBtn.setAttribute('aria-label', 'Stop reading aloud');
-  stopBtn.title = 'Stop reading';
+  stopBtn.setAttribute('aria-label', t('tts.stop_aria', 'Stop reading aloud'));
+  stopBtn.title = t('tts.stop_reading', 'Stop reading');
   stopBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">stop</span>`;
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     const text = typeof getTextFn === 'function' ? getTextFn() : getTextFn;
-    const lang = typeof getLangFn === 'function' ? getLangFn() : (getLangFn || 'en');
+    const lang = typeof getLangFn === 'function' ? getLangFn() : (getLangFn || i18n.getLanguage());
 
     if (tts.state === 'speaking') {
       tts.pause();
@@ -193,17 +206,17 @@ export function createReadAloudButton(getTextFn, getLangFn) {
     const label = btn.querySelector('.btn-label');
     const icon = btn.querySelector('.material-symbols-outlined');
     if (state === 'speaking') {
-      if (label) label.textContent = 'Pause';
+      if (label) label.textContent = t('tts.pause', 'Pause');
       if (icon) icon.textContent = 'pause';
       btn.classList.add('bg-secondary-fixed/40', 'ring-1', 'ring-secondary');
       stopBtn.classList.remove('hidden');
     } else if (state === 'paused') {
-      if (label) label.textContent = 'Resume';
+      if (label) label.textContent = t('tts.resume', 'Resume');
       if (icon) icon.textContent = 'play_arrow';
       btn.classList.remove('bg-secondary-fixed/40', 'ring-1', 'ring-secondary');
       stopBtn.classList.remove('hidden');
     } else {
-      if (label) label.textContent = 'Read';
+      if (label) label.textContent = t('tts.read', 'Read');
       if (icon) icon.textContent = 'volume_up';
       btn.classList.remove('bg-secondary-fixed/40', 'ring-1', 'ring-secondary');
       stopBtn.classList.add('hidden');

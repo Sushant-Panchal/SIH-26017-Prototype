@@ -196,19 +196,19 @@
         </svg>
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5 sm:gap-space-xs">
-            <span class="font-headline-sm text-base sm:text-headline-sm text-on-surface font-bold tracking-tight whitespace-nowrap">Bhoomi Sakha</span>
-            <span class="hidden sm:inline-block px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] sm:text-label-sm uppercase tracking-wider whitespace-nowrap">SIH 2026 • PS ID 26017</span>
+            <span class="font-headline-sm text-base sm:text-headline-sm text-on-surface font-bold tracking-tight whitespace-nowrap" id="brandHeaderTitle">Bhoomi Sakha</span>
+            <span class="hidden sm:inline-block px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] sm:text-label-sm uppercase tracking-wider whitespace-nowrap" id="brandHeaderBadge">SIH 2026 • PS ID 26017</span>
           </div>
-          <span class="hidden lg:block font-body-sm text-body-sm text-on-surface-variant truncate">Predictive Land Acquisition Delay-Risk Platform</span>
+          <span class="hidden lg:block font-body-sm text-body-sm text-on-surface-variant truncate" id="brandHeaderSubtitle">Predictive Land Acquisition Delay-Risk Platform</span>
         </div>
       </div>
 
       <!-- Desktop Navigation Tabs -->
       <nav class="hidden xl:flex items-center gap-space-xs bg-surface-container-low p-1 rounded-lg border border-outline-variant/30" id="mainNavigation" role="navigation" aria-label="Main Navigation">
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard">Dashboard</a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment">Risk Assessment</a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects">Projects Directory</a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit">Audit Detail</a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard"><span>Dashboard</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment"><span>Risk Assessment</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects"><span>Projects Directory</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit"><span>Audit Detail</span></a>
       </nav>
 
       <!-- Engine Status, Presets & Officer Dossier -->
@@ -292,8 +292,8 @@
         <!-- Officer Persona -->
         <div class="flex items-center gap-space-sm pl-space-xs hidden sm:flex">
           <div class="flex flex-col text-right hidden lg:flex">
-            <span class="font-label-md text-label-md text-on-surface font-semibold">Dr. R. K. Sharma</span>
-            <span class="font-label-sm text-label-sm text-on-surface-variant font-medium">IAS, Land Commissioner</span>
+            <span class="font-label-md text-label-md text-on-surface font-semibold" id="officerName">Dr. R. K. Sharma</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant font-medium" id="officerRole">IAS, Land Commissioner</span>
           </div>
           <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-label-sm ring-1 ring-outline-variant/60" title="Dr. R. K. Sharma, IAS">
             RS
@@ -330,19 +330,19 @@
     <div class="h-8 w-full px-3 sm:px-gutter-desktop bg-surface-container-low/60 border-t border-outline-variant/20 flex items-center justify-between font-label-sm text-xs sm:text-label-sm text-on-surface-variant overflow-hidden">
       <div class="flex items-center gap-space-xs truncate mr-2" id="breadcrumbTrail">
         <span class="material-symbols-outlined text-[14px] shrink-0">account_balance</span>
-        <span class="hidden sm:inline">Command Center</span>
+        <span class="hidden sm:inline" id="breadcrumbRoot">Command Center</span>
         <span class="text-outline-variant hidden sm:inline">/</span>
         <span class="text-on-surface font-medium capitalize truncate" id="currentViewName">National Cadastral Matrix</span>
       </div>
       <div class="flex items-center gap-2 sm:gap-space-md shrink-0">
-        <span class="hidden md:flex items-center gap-1">
+        <span class="hidden md:flex items-center gap-1" id="statutoryCutoffContainer">
           <span class="material-symbols-outlined text-[14px] text-secondary">lock_clock</span>
-          Statutory Cutoff: <span class="font-bold text-on-surface">48h Remaining</span>
+          <span id="statutoryCutoffLabel">Statutory Cutoff: 48h Remaining</span>
         </span>
         <span class="text-outline-variant hidden md:inline">•</span>
         <span class="font-tabular-data text-[11px] sm:text-label-sm flex items-center gap-1">
           <span class="material-symbols-outlined text-[14px]">schedule</span>
-          IST: <span id="liveISTClock" class="font-semibold text-on-surface">--:--:--</span>
+          <span id="liveISTLabel">IST:</span> <span id="liveISTClock" class="font-semibold text-on-surface">--:--:--</span>
         </span>
       </div>
     </div>
@@ -359,12 +359,12 @@
   <!-- Civic System Footer -->
   <footer class="w-full bg-surface-container-lowest border-t border-outline-variant/30 py-space-md">
     <div class="w-full px-gutter-desktop flex flex-col sm:flex-row items-center justify-between gap-space-sm text-on-surface-variant font-label-sm text-label-sm">
-      <div>
+      <div id="footerDescription">
         Smart India Hackathon 2026 • Problem Statement ID 26017 • National Land Records Modernization Program (NLRMP) Architecture
       </div>
       <div class="flex items-center gap-space-md">
-        <span class="font-tabular-data">Audit Node: 0x88F2B7</span>
-        <span>Precision Cadastral Verification Protocol v4.1</span>
+        <span class="font-tabular-data" id="footerAuditNode">Audit Node: 0x88F2B7</span>
+        <span id="footerProtocol">Precision Cadastral Verification Protocol v4.1</span>
       </div>
     </div>
   </footer>

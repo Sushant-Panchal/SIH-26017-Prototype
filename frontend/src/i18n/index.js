@@ -26,6 +26,9 @@ class I18nManager {
   constructor() {
     this.currentLanguage = this.getStoredLanguage();
     this.listeners = [];
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.setAttribute('lang', this.currentLanguage);
+    }
   }
 
   getStoredLanguage() {
@@ -44,11 +47,15 @@ class I18nManager {
     if (!SUPPORTED_LANGUAGES[langCode]) return;
     this.currentLanguage = langCode;
     try {
-      localStorage.setItem(STORAGE_KEY, langCode);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, langCode);
+      }
     } catch (e) {
       console.warn('Could not persist language to localStorage:', e);
     }
-    document.documentElement.setAttribute('lang', langCode);
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.setAttribute('lang', langCode);
+    }
     this.notifyListeners();
   }
 

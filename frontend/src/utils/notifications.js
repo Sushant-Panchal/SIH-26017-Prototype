@@ -3,6 +3,8 @@
  * Handles system/application alerts, unread counts, and localStorage persistence.
  */
 
+import { t } from '../i18n/index.js';
+
 const STORAGE_KEY = 'bhoomi_notifications_read';
 
 export const INITIAL_NOTIFICATIONS = [
@@ -75,6 +77,10 @@ class NotificationStore {
     const readIds = new Set(this.getReadIds());
     return INITIAL_NOTIFICATIONS.map(n => ({
       ...n,
+      title: t(`notifications.items.${n.id}.title`, n.title),
+      summary: t(`notifications.items.${n.id}.summary`, n.summary),
+      category: t(`notifications.categories.${n.category}`, n.category),
+      actionLabel: t(`notifications.items.${n.id}.actionLabel`, n.actionLabel),
       isRead: readIds.has(n.id),
     }));
   }

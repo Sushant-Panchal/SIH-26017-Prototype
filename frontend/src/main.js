@@ -131,6 +131,8 @@ class BhoomiSakhaApp {
         } else {
           menu.classList.remove('hidden');
           toggleBtn.setAttribute('aria-expanded', 'true');
+          const firstBtn = menu.querySelector('.theme-option-btn');
+          if (firstBtn) firstBtn.focus();
         }
       });
 
@@ -140,6 +142,7 @@ class BhoomiSakhaApp {
           themeManager.setTheme(selected);
           menu.classList.add('hidden');
           toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.focus();
         });
       });
 
@@ -175,9 +178,11 @@ class BhoomiSakhaApp {
         const check = btn.querySelector('.check-icon');
         if (itemLang === lang) {
           btn.classList.add('bg-surface-container', 'font-semibold');
+          btn.setAttribute('aria-selected', 'true');
           if (check) check.classList.remove('hidden');
         } else {
           btn.classList.remove('bg-surface-container', 'font-semibold');
+          btn.setAttribute('aria-selected', 'false');
           if (check) check.classList.add('hidden');
         }
       });
@@ -200,6 +205,8 @@ class BhoomiSakhaApp {
         } else {
           menu.classList.remove('hidden');
           toggleBtn.setAttribute('aria-expanded', 'true');
+          const activeBtn = menu.querySelector('[aria-selected="true"]') || optionBtns[0];
+          if (activeBtn) activeBtn.focus();
         }
       });
 
@@ -209,6 +216,7 @@ class BhoomiSakhaApp {
           i18n.setLanguage(selected);
           menu.classList.add('hidden');
           toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.focus();
         });
       });
 
@@ -279,6 +287,13 @@ class BhoomiSakhaApp {
   }
 
   updateLanguageUI() {
+    // 1. Document title
+    const platformName = t('header.platformName', 'Bhoomi Sakha');
+    const subtitle = t('header.subtitle', 'Predictive Land Acquisition Delay-Risk Platform');
+    const badge = t('header.sihBadge', 'SIH 2026 • PS ID 26017');
+    document.title = `${platformName} | ${subtitle} (${badge})`;
+
+    // 2. Navigation tabs
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(tab => {
       const target = tab.getAttribute('data-target');
@@ -288,9 +303,87 @@ class BhoomiSakhaApp {
       }
     });
 
+    // 3. Breadcrumb & View title
+    const breadcrumbRoot = document.getElementById('breadcrumbRoot');
+    if (breadcrumbRoot) {
+      breadcrumbRoot.textContent = t('header.commandCenter', 'Command Center');
+    }
+
     const breadcrumbLabel = document.getElementById('currentViewName');
     if (breadcrumbLabel && this.currentView) {
       breadcrumbLabel.textContent = t(`views.${this.currentView}`, breadcrumbLabel.textContent);
+    }
+
+    // 4. Header brand & badges
+    const brandHeaderTitle = document.getElementById('brandHeaderTitle');
+    if (brandHeaderTitle) brandHeaderTitle.textContent = platformName;
+
+    const brandHeaderBadge = document.getElementById('brandHeaderBadge');
+    if (brandHeaderBadge) brandHeaderBadge.textContent = badge;
+
+    const brandHeaderSubtitle = document.getElementById('brandHeaderSubtitle');
+    if (brandHeaderSubtitle) brandHeaderSubtitle.textContent = subtitle;
+
+    // 5. Officer Persona
+    const officerName = document.getElementById('officerName');
+    if (officerName) officerName.textContent = t('header.officerName', 'Dr. R. K. Sharma');
+
+    const officerRole = document.getElementById('officerRole');
+    if (officerRole) officerRole.textContent = t('header.officerRole', 'IAS, Land Commissioner');
+
+    // 6. Secondary ribbon
+    const statutoryCutoffLabel = document.getElementById('statutoryCutoffLabel');
+    if (statutoryCutoffLabel) statutoryCutoffLabel.textContent = t('header.statutoryCutoff', 'Statutory Cutoff: 48h Remaining');
+
+    const liveISTLabel = document.getElementById('liveISTLabel');
+    if (liveISTLabel) liveISTLabel.textContent = `${t('header.istClock', 'IST')}:`;
+
+    // 7. Civic Footer
+    const footerDesc = document.getElementById('footerDescription');
+    if (footerDesc) footerDesc.textContent = t('footer.description', footerDesc.textContent);
+
+    const footerAuditNode = document.getElementById('footerAuditNode');
+    if (footerAuditNode) footerAuditNode.textContent = t('footer.auditNode', 'Audit Node: 0x88F2B7');
+
+    const footerProtocol = document.getElementById('footerProtocol');
+    if (footerProtocol) footerProtocol.textContent = t('footer.protocol', 'Precision Cadastral Verification Protocol v4.1');
+
+    // 8. Header action labels & accessibility
+    const notifBellBtn = document.getElementById('notifBellBtn');
+    if (notifBellBtn) notifBellBtn.setAttribute('title', t('header.openNotifications', 'System Notifications'));
+
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    if (themeToggleBtn) {
+      themeToggleBtn.setAttribute('title', t('header.toggleTheme', 'Color Theme'));
+      themeToggleBtn.setAttribute('aria-label', t('header.toggleTheme', 'Toggle color theme'));
+    }
+
+    const langToggleBtn = document.getElementById('langToggleBtn');
+    if (langToggleBtn) {
+      langToggleBtn.setAttribute('title', t('header.selectLanguage', 'Language'));
+      langToggleBtn.setAttribute('aria-label', t('header.selectLanguage', 'Select application language'));
+    }
+
+    const mobileMenuToggleBtn = document.getElementById('mobileMenuToggleBtn');
+    if (mobileMenuToggleBtn) {
+      mobileMenuToggleBtn.setAttribute('aria-label', t('header.toggleMenu', 'Open navigation menu'));
+    }
+
+    // 9. Update status text
+    this.updateBackendStatusUI();
+  }
+
+  updateBackendStatusUI() {
+    const text = document.getElementById('backendStatusText');
+    if (!text) return;
+    if (this.isBackendOnline) {
+      let engineLabel = t('header.statusConnected', 'FastAPI Connected • XGBoost Engine Active');
+      if (this.cachedMetadata?.model?.version) {
+        engineLabel = `${engineLabel} (v${this.cachedMetadata.model.version})`;
+      }
+      text.textContent = engineLabel;
+    } else {
+      text.textContent = t('header.statusUnavailable', 'Backend Unavailable • Click to Retry');
     }
   }
 
@@ -415,20 +508,20 @@ class BhoomiSakhaApp {
       dot.innerHTML = `<span class="animate-pulse relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>`;
     }
     if (text && !this.isBackendOnline) {
-      text.textContent = 'Backend: Connecting...';
+      text.textContent = t('header.statusConnecting', 'Backend: Connecting...');
       text.className = 'font-label-sm text-label-sm text-on-surface-variant font-tabular-data';
     }
 
     const res = await predictionService.checkHealth();
 
     if (res.online && res.modelLoaded) {
-      let engineLabel = 'FastAPI Connected • XGBoost Engine Active';
+      let engineLabel = t('header.statusConnected', 'FastAPI Connected • XGBoost Engine Active');
       try {
         if (!this.cachedMetadata) {
           this.cachedMetadata = await predictionService.getMetadata();
         }
         if (this.cachedMetadata?.model?.version) {
-          engineLabel = `FastAPI Connected • XGBoost Engine v${this.cachedMetadata.model.version} Active`;
+          engineLabel = `${engineLabel} (v${this.cachedMetadata.model.version})`;
         }
       } catch (e) {
         // Fallback to standard active label
@@ -445,7 +538,7 @@ class BhoomiSakhaApp {
         text.className = 'font-label-sm text-label-sm text-on-surface font-tabular-data font-semibold';
       }
       if (!this.isBackendOnline && showToast) {
-        this.showToast('Backend connected: XGBoost binary classifier loaded.', 'success');
+        this.showToast(t('header.statusConnected', 'FastAPI Connected • XGBoost Engine Active'), 'success');
       }
       this.isBackendOnline = true;
     } else {
@@ -455,11 +548,11 @@ class BhoomiSakhaApp {
         `;
       }
       if (text) {
-        text.textContent = 'Backend Unavailable • Click to Retry';
+        text.textContent = t('header.statusUnavailable', 'Backend Unavailable • Click to Retry');
         text.className = 'font-label-sm text-label-sm text-red-600 dark:text-red-400 font-tabular-data font-semibold';
       }
       if (this.isBackendOnline || showToast) {
-        this.showToast('Prediction service is temporarily unavailable. Please try again.', 'warning');
+        this.showToast(t('header.statusUnavailable', 'Backend Unavailable • Click to Retry'), 'warning');
       }
       this.isBackendOnline = false;
     }

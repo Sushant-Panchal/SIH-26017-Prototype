@@ -8,10 +8,11 @@ import {
   getRiskLevel,
   getRiskBadgeClasses,
   getRiskTextColor,
+  getRiskLevelLabel,
 } from '../utils/risk.js';
 import { createReadAloudButton } from '../utils/tts.js';
 import { attachMicToInput } from '../utils/stt.js';
-import { i18n } from '../i18n/index.js';
+import { i18n, t } from '../i18n/index.js';
 
 export function renderDashboardView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -27,13 +28,13 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="flex flex-col gap-space-xs max-w-3xl">
               <div class="flex items-center gap-space-sm text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
                 <span class="inline-block w-2 h-2 rounded-full bg-secondary-container"></span>
-                <span>National Infrastructure Pipeline • MoRTH / MoR Analytics</span>
+                <span>${t('dashboard.pipelineBadge', 'National Infrastructure Pipeline • MoRTH / MoR Analytics')}</span>
               </div>
               <h1 class="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">
-                Land Acquisition Intelligence
+                ${t('dashboard.title', 'Land Acquisition Intelligence')}
               </h1>
               <p class="font-body-lg text-body-lg text-on-surface-variant">
-                Monitor project progress, detect emerging delay risks, and prioritize intervention across critical national infrastructure corridors.
+                ${t('dashboard.subtitle', 'Monitor project progress, detect emerging delay risks, and prioritize intervention across critical national infrastructure corridors.')}
               </p>
             </div>
             
@@ -41,11 +42,11 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="flex flex-wrap items-center gap-space-sm">
               <button class="flex items-center gap-space-xs px-space-md py-2.5 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg shadow-sm hover:bg-on-surface transition-all duration-150 active:scale-[0.98]" id="nationalScanBtn" type="button">
                 <span class="material-symbols-outlined text-[18px] text-secondary-container">radar</span>
-                <span>Run National Risk Scan</span>
+                <span>${t('dashboard.runScan', 'Run National Risk Scan')}</span>
               </button>
               <button class="flex items-center gap-space-xs px-space-md py-2.5 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded-lg shadow-sm hover:bg-surface-container-low transition-all duration-150 border border-outline-variant/30" id="openAssessmentCtaBtn" type="button">
                 <span class="material-symbols-outlined text-[18px] text-secondary">tune</span>
-                <span>Launch Assessment Cockpit</span>
+                <span>${t('dashboard.launchCockpit', 'Launch Assessment Cockpit')}</span>
               </button>
             </div>
           </div>
@@ -57,8 +58,8 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Total Projects Monitored</span>
-                  <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">142 Projects</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.totalProjects', 'Total Projects Monitored')}</span>
+                  <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">${t('dashboard.totalProjectsCount', '142 Projects')}</span>
                 </div>
                 <div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface">
                   <span class="material-symbols-outlined text-[22px]">account_tree</span>
@@ -66,7 +67,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               </div>
               <div class="mt-space-md pt-space-xs flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm">
                 <span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant/40"></span>
-                <span>46 National Highways, 38 Freight, 58 Energy &amp; Urban</span>
+                <span>${t('dashboard.totalProjectsDesc', '46 National Highways, 38 Freight, 58 Energy & Urban')}</span>
               </div>
             </div>
 
@@ -75,9 +76,9 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               <div class="absolute top-0 left-0 right-0 h-1 bg-secondary-container"></div>
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">High / Critical Risk</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.highCriticalRisk', 'High / Critical Risk')}</span>
                   <div class="flex items-baseline gap-space-xs">
-                    <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">29 Projects</span>
+                    <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">${t('dashboard.highCriticalCount', '29 Projects')}</span>
                     <span class="font-label-sm text-label-sm text-secondary font-semibold font-tabular-data">(20.4%)</span>
                   </div>
                 </div>
@@ -87,7 +88,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               </div>
               <div class="mt-space-md pt-space-xs flex items-center gap-space-xs text-secondary-container font-label-sm text-label-sm font-semibold">
                 <span class="material-symbols-outlined text-[14px]">trending_up</span>
-                <span>+3 from last sprint • 18 High, 11 Critical</span>
+                <span>${t('dashboard.highCriticalDesc', '+3 from last sprint • 18 High, 11 Critical')}</span>
               </div>
             </div>
 
@@ -95,8 +96,8 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Requiring Intervention</span>
-                  <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">14 Immediate Actions</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.requiringIntervention', 'Requiring Intervention')}</span>
+                  <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">${t('dashboard.interventionCount', '14 Immediate Actions')}</span>
                 </div>
                 <div class="w-10 h-10 rounded-lg bg-secondary-fixed/50 flex items-center justify-center text-on-secondary-fixed">
                   <span class="material-symbols-outlined text-[22px]">notification_important</span>
@@ -104,7 +105,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               </div>
               <div class="mt-space-md pt-space-xs flex items-center gap-space-xs text-on-surface font-body-sm text-body-sm">
                 <span class="w-2 h-2 rounded-full bg-secondary-container"></span>
-                <span>8 Document Bottlenecks, 6 Compensation Escrows</span>
+                <span>${t('dashboard.interventionDesc', '8 Document Bottlenecks, 6 Compensation Escrows')}</span>
               </div>
             </div>
 
@@ -112,10 +113,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Average Delay Risk</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.avgDelayRisk', 'Average Delay Risk')}</span>
                   <div class="flex items-baseline gap-space-xs">
                     <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">36.8%</span>
-                    <span class="font-label-sm text-label-sm text-on-surface-variant">Model CI 95%</span>
+                    <span class="font-label-sm text-label-sm text-on-surface-variant">${t('dashboard.modelConfidence', 'Model CI 95%')}</span>
                   </div>
                 </div>
                 <div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface">
@@ -123,8 +124,8 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                 </div>
               </div>
               <div class="mt-space-md pt-space-xs flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
-                <span class="text-on-surface font-medium">Low-Medium Zone</span>
-                <span class="font-tabular-data text-label-sm text-on-surface-variant">Baseline variance -2.4% vs state avg</span>
+                <span class="text-on-surface font-medium">${t('dashboard.lowMediumZone', 'Low-Medium Zone')}</span>
+                <span class="font-tabular-data text-label-sm text-on-surface-variant">${t('dashboard.baselineVariance', 'Baseline variance -2.4% vs state avg')}</span>
               </div>
             </div>
 
@@ -140,11 +141,11 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               <div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
                 <div class="flex items-center justify-between">
                   <div class="flex flex-col">
-                    <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Risk Overview &amp; Distribution</h3>
-                    <span class="font-body-sm text-body-sm text-on-surface-variant">National Portfolio breakdown (N=142)</span>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${t('dashboard.riskOverview', 'Risk Overview & Distribution')}</h3>
+                    <span class="font-body-sm text-body-sm text-on-surface-variant">${t('dashboard.portfolioBreakdown', 'National Portfolio breakdown (N=142)')}</span>
                   </div>
                   <span class="font-tabular-data font-label-sm text-label-sm px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-semibold">
-                    Live Model Active
+                    ${t('dashboard.liveModelActive', 'Live Model Active')}
                   </span>
                 </div>
 
@@ -169,63 +170,63 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                   <div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-0.5 hover:bg-surface-container transition-colors border border-outline-variant/20">
                     <div class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
-                      <span class="font-label-sm text-label-sm font-bold text-on-surface">CRITICAL</span>
+                      <span class="font-label-sm text-label-sm font-bold text-on-surface">${getRiskLevelLabel('CRITICAL')}</span>
                     </div>
                     <div class="flex items-baseline justify-between mt-1">
                       <span class="font-headline-sm text-headline-sm font-bold text-on-surface font-tabular-data">11</span>
                       <span class="font-tabular-data text-label-sm text-error font-semibold">8%</span>
                     </div>
-                    <span class="font-body-sm text-[11px] text-on-surface-variant">Action plan mandatory</span>
+                    <span class="font-body-sm text-[11px] text-on-surface-variant">${t('dashboard.actionPlanMandatory', 'Action plan mandatory')}</span>
                   </div>
                   <!-- High -->
                   <div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-0.5 hover:bg-surface-container transition-colors border border-outline-variant/20">
                     <div class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-secondary-container"></span>
-                      <span class="font-label-sm text-label-sm font-bold text-on-surface">HIGH</span>
+                      <span class="font-label-sm text-label-sm font-bold text-on-surface">${getRiskLevelLabel('HIGH')}</span>
                     </div>
                     <div class="flex items-baseline justify-between mt-1">
                       <span class="font-headline-sm text-headline-sm font-bold text-on-surface font-tabular-data">18</span>
                       <span class="font-tabular-data text-label-sm text-secondary font-semibold">13%</span>
                     </div>
-                    <span class="font-body-sm text-[11px] text-on-surface-variant">Stagnation watchlist</span>
+                    <span class="font-body-sm text-[11px] text-on-surface-variant">${t('dashboard.stagnationWatchlist', 'Stagnation watchlist')}</span>
                   </div>
                   <!-- Medium -->
                   <div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-0.5 hover:bg-surface-container transition-colors border border-outline-variant/20">
                     <div class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-secondary-fixed-dim"></span>
-                      <span class="font-label-sm text-label-sm font-bold text-on-surface">MEDIUM</span>
+                      <span class="font-label-sm text-label-sm font-bold text-on-surface">${getRiskLevelLabel('MEDIUM')}</span>
                     </div>
                     <div class="flex items-baseline justify-between mt-1">
                       <span class="font-headline-sm text-headline-sm font-bold text-on-surface font-tabular-data">48</span>
                       <span class="font-tabular-data text-label-sm text-on-surface-variant font-semibold">34%</span>
                     </div>
-                    <span class="font-body-sm text-[11px] text-on-surface-variant">Statutory tracking</span>
+                    <span class="font-body-sm text-[11px] text-on-surface-variant">${t('dashboard.statutoryTracking', 'Statutory tracking')}</span>
                   </div>
                   <!-- Low -->
                   <div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-0.5 hover:bg-surface-container transition-colors border border-outline-variant/20">
                     <div class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed-dim"></span>
-                      <span class="font-label-sm text-label-sm font-bold text-on-surface">LOW</span>
+                      <span class="font-label-sm text-label-sm font-bold text-on-surface">${getRiskLevelLabel('LOW')}</span>
                     </div>
                     <div class="flex items-baseline justify-between mt-1">
                       <span class="font-headline-sm text-headline-sm font-bold text-on-surface font-tabular-data">65</span>
                       <span class="font-tabular-data text-label-sm text-on-surface-variant font-semibold">45%</span>
                     </div>
-                    <span class="font-body-sm text-[11px] text-on-surface-variant">Nominal progress</span>
+                    <span class="font-body-sm text-[11px] text-on-surface-variant">${t('dashboard.nominalTrajectory', 'Nominal trajectory')}</span>
                   </div>
                 </div>
 
                 <!-- Key Risk Drivers Breakdown -->
                 <div class="pt-space-sm flex flex-col gap-space-sm border-t border-surface-container-high">
                   <div class="flex items-center justify-between">
-                    <span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">Key Risk Drivers</span>
-                    <span class="font-label-sm text-label-sm text-on-surface-variant">Root Cause Cluster</span>
+                    <span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">${t('dashboard.keyRiskDrivers', 'Key Risk Drivers')}</span>
+                    <span class="font-label-sm text-label-sm text-on-surface-variant">${t('dashboard.rootCauseCluster', 'Root Cause Cluster')}</span>
                   </div>
                   <!-- Driver Progress Bars -->
                   <div class="flex flex-col gap-space-xs">
                     <div class="flex flex-col gap-1">
                       <div class="flex justify-between font-label-sm text-label-sm">
-                        <span class="text-on-surface font-medium">Documentation Backlog</span>
+                        <span class="text-on-surface font-medium">${t('dashboard.driverDocumentation', 'Documentation Backlog (Title & 3A)')}</span>
                         <span class="font-tabular-data font-bold text-on-surface">38%</span>
                       </div>
                       <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
@@ -234,7 +235,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                     </div>
                     <div class="flex flex-col gap-1">
                       <div class="flex justify-between font-label-sm text-label-sm">
-                        <span class="text-on-surface font-medium">Possession Delays</span>
+                        <span class="text-on-surface font-medium">${t('dashboard.driverPossession', 'Possession Delays (Encroachments)')}</span>
                         <span class="font-tabular-data font-bold text-on-surface">27%</span>
                       </div>
                       <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
@@ -243,7 +244,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                     </div>
                     <div class="flex flex-col gap-1">
                       <div class="flex justify-between font-label-sm text-label-sm">
-                        <span class="text-on-surface font-medium">Court Disputes &amp; Injunctions</span>
+                        <span class="text-on-surface font-medium">${t('dashboard.driverDisputes', 'Court Disputes & Injunctions')}</span>
                         <span class="font-tabular-data font-bold text-on-surface">19%</span>
                       </div>
                       <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
@@ -252,7 +253,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                     </div>
                     <div class="flex flex-col gap-1">
                       <div class="flex justify-between font-label-sm text-label-sm">
-                        <span class="text-on-surface font-medium">Approval Stalls (Inter-Agency)</span>
+                        <span class="text-on-surface font-medium">${t('dashboard.driverApprovals', 'Approval Stalls (Inter-Agency)')}</span>
                         <span class="font-tabular-data font-bold text-on-surface">16%</span>
                       </div>
                       <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
@@ -269,17 +270,17 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                 <div class="flex items-center justify-between text-secondary-container">
                   <div class="flex items-center gap-space-xs">
                     <span class="material-symbols-outlined text-[20px]">psychology</span>
-                    <span class="font-label-md text-label-md font-bold uppercase tracking-wider">Predictive Triangulation Alert</span>
+                    <span class="font-label-md text-label-md font-bold uppercase tracking-wider">${t('dashboard.predictiveTriangulationAlert', 'Predictive Triangulation Alert')}</span>
                   </div>
                   <div id="alertReadAloudSlot"></div>
                 </div>
                 <p class="font-body-md text-body-md text-on-primary/90" id="triangulationAlertText">
-                  Corridors passing through industrial agro-zones face an 82% likelihood of Section 15 objection escalation within 14 days without active district tehsildar hearings.
+                  ${t('dashboard.triangulationAlertText', 'Corridors passing through industrial agro-zones face an 82% likelihood of Section 15 objection escalation within 14 days without active district tehsildar hearings.')}
                 </p>
                 <div class="pt-space-xs flex items-center justify-between">
-                  <span class="font-label-sm text-label-sm text-primary-fixed-dim">Model Confidence: 91.4% (SIH Model XG-26)</span>
+                  <span class="font-label-sm text-label-sm text-primary-fixed-dim">${t('dashboard.modelConfidenceTag', 'Model Confidence: 91.4% (SIH Model XG-26)')}</span>
                   <button class="px-space-sm py-1 bg-surface-container-lowest text-on-surface font-label-sm text-label-sm rounded hover:bg-surface-container transition-colors font-semibold" id="jumpToAssessmentBtn" type="button">
-                    Assess Impact
+                    ${t('dashboard.assessBtn', 'Assess Impact')}
                   </button>
                 </div>
               </div>
@@ -292,16 +293,16 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
                   <div class="flex flex-col">
                     <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">
-                      Priority Projects Requiring Administrative Oversight
+                      ${t('dashboard.priorityProjects', 'Priority Projects Requiring Administrative Oversight')}
                     </h3>
                     <span class="font-body-sm text-body-sm text-on-surface-variant">
-                      Cadastral escalation ledger sorted by delay probability
+                      ${t('dashboard.cadastralEscalation', 'Cadastral escalation ledger sorted by delay probability')}
                     </span>
                   </div>
                   <!-- Quick Table Filters -->
                   <div class="flex items-center gap-space-xs">
                     <div class="relative flex items-center">
-                      <input class="pl-7 pr-8 py-1 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface w-48 border border-outline-variant/40" id="projectSearchInput" placeholder="Search project or ID..." type="text"/>
+                      <input class="pl-7 pr-8 py-1 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface w-48 border border-outline-variant/40" id="projectSearchInput" placeholder="${t('dashboard.searchPlaceholder', 'Search project or ID...')}" type="text"/>
                       <span class="material-symbols-outlined absolute left-1.5 top-1.5 text-[16px] text-on-surface-variant pointer-events-none">search</span>
                       <div class="absolute right-1 top-0.5" id="dashboardSearchMicSlot"></div>
                     </div>
@@ -313,13 +314,13 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                   <table class="w-full text-left border-collapse" id="priorityProjectsTable">
                     <thead>
                       <tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider border-b border-outline-variant/30">
-                        <th class="py-2.5 px-space-sm font-bold">Project ID</th>
-                        <th class="py-2.5 px-space-sm font-bold">Name &amp; Sector</th>
-                        <th class="py-2.5 px-space-sm font-bold">District / State</th>
-                        <th class="py-2.5 px-space-sm font-bold font-tabular-data">Progress</th>
-                        <th class="py-2.5 px-space-sm font-bold font-tabular-data">Delay Risk</th>
-                        <th class="py-2.5 px-space-sm font-bold">Tier</th>
-                        <th class="py-2.5 px-space-sm font-bold text-right">Action</th>
+                        <th class="py-2.5 px-space-sm font-bold">${t('dashboard.colId', 'Project ID')}</th>
+                        <th class="py-2.5 px-space-sm font-bold">${t('dashboard.colName', 'Name & Sector')}</th>
+                        <th class="py-2.5 px-space-sm font-bold">${t('dashboard.colDistrict', 'District / State')}</th>
+                        <th class="py-2.5 px-space-sm font-bold font-tabular-data">${t('dashboard.colProgress', 'Progress')}</th>
+                        <th class="py-2.5 px-space-sm font-bold font-tabular-data">${t('dashboard.colRisk', 'Delay Risk')}</th>
+                        <th class="py-2.5 px-space-sm font-bold">${t('dashboard.colTier', 'Tier')}</th>
+                        <th class="py-2.5 px-space-sm font-bold text-right">${t('dashboard.colAction', 'Action')}</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-surface-container font-body-sm text-body-sm" id="projectsTableBody">
@@ -366,7 +367,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
   const alertText = container.querySelector('#triangulationAlertText');
   if (alertSlot && alertText) {
     const readBtn = createReadAloudButton(
-      () => `Predictive Triangulation Alert: ${alertText.textContent.trim()}`,
+      () => `${t('dashboard.predictiveTriangulationAlert', 'Predictive Triangulation Alert')}: ${alertText.textContent.trim()}`,
       () => i18n.getLanguage()
     );
     alertSlot.appendChild(readBtn);
@@ -375,17 +376,26 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
   // Action button clicks
   const openCta = container.querySelector('#openAssessmentCtaBtn');
   const jumpBtn = container.querySelector('#jumpToAssessmentBtn');
+  const nationalScanBtn = container.querySelector('#nationalScanBtn');
   if (openCta && onNavigateToAssessment) openCta.addEventListener('click', () => onNavigateToAssessment('medium'));
   if (jumpBtn && onNavigateToAssessment) jumpBtn.addEventListener('click', () => onNavigateToAssessment('high'));
+  if (nationalScanBtn) {
+    nationalScanBtn.addEventListener('click', () => {
+      alert(t('dashboard.scanCompleted', 'National Scan Completed: 29 High/Critical risks identified.'));
+    });
+  }
 
   attachRowEvents(container, onNavigateToAssessment, onNavigateToAudit);
 }
 
 function renderProjectRows(projects) {
   if (projects.length === 0) {
-    return `<tr><td colspan="7" class="text-center py-4 text-on-surface-variant">No matching projects found.</td></tr>`;
+    return `<tr><td colspan="7" class="text-center py-4 text-on-surface-variant">${t('dashboard.noMatchingProjects', 'No matching projects found.')}</td></tr>`;
   }
-  return projects.map(project => `
+  return projects.map(project => {
+    const rawTier = project.riskLevel || getRiskLevel(project.delayProbability);
+    const localizedTier = getRiskLevelLabel(rawTier);
+    return `
     <tr class="hover:bg-surface-container-low/70 transition-colors group">
       <td class="py-space-sm px-space-sm font-tabular-data font-bold text-on-surface">
         ${project.id}
@@ -407,27 +417,28 @@ function renderProjectRows(projects) {
           </div>
         </div>
       </td>
-      <td class="py-space-sm px-space-sm font-tabular-data font-bold ${getRiskTextColor(project.riskLevel || getRiskLevel(project.delayProbability))}">
+      <td class="py-space-sm px-space-sm font-tabular-data font-bold ${getRiskTextColor(rawTier)}">
         ${project.delayProbability}%
       </td>
       <td class="py-space-sm px-space-sm">
-        <span class="px-2 py-0.5 rounded-full ${getRiskBadgeClasses(project.riskLevel || getRiskLevel(project.delayProbability))} font-label-sm text-label-sm font-bold inline-flex items-center gap-1 border">
+        <span class="px-2 py-0.5 rounded-full ${getRiskBadgeClasses(rawTier)} font-label-sm text-label-sm font-bold inline-flex items-center gap-1 border">
           <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-          ${project.riskLevel || getRiskLevel(project.delayProbability)}
+          ${localizedTier}
         </span>
       </td>
       <td class="py-space-sm px-space-sm text-right">
         <div class="inline-flex items-center gap-1">
           <button class="assess-project-btn px-space-xs py-1 bg-primary text-on-primary font-label-sm text-label-sm rounded hover:bg-surface-tint transition-colors font-semibold" data-preset="${project.presetKey || 'medium'}" type="button">
-            Assess
+            ${t('dashboard.assessBtn', 'Assess')}
           </button>
           <button class="audit-project-btn px-space-xs py-1 bg-surface-container text-on-surface font-label-sm text-label-sm rounded hover:bg-surface-container-high transition-colors font-medium" data-id="${project.id}" type="button">
-            Audit
+            ${t('dashboard.auditBtn', 'Audit')}
           </button>
         </div>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function attachRowEvents(container, onNavigateToAssessment, onNavigateToAudit) {
