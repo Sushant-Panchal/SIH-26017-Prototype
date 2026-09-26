@@ -38,7 +38,11 @@ export default {
     "signedOutToast": "सफलतापूर्वक साइन आउट किया गया।",
     "accessDeniedCitizen": "पहुंच प्रतिबंधित: नागरिक खाते अधिकारी कमांड सेंटर तक नहीं पहुंच सकते।",
     "accessDeniedOfficer": "पहुंच प्रतिबंधित: अधिकारी खाते सीधे नागरिक पोर्टल में प्रवेश नहीं कर सकते।",
-    "sessionVerifying": "सुरक्षित सत्र सत्यापित किया जा रहा है..."
+    "sessionVerifying": "सुरक्षित सत्र सत्यापित किया जा रहा है...",
+    "officerMode": "अधिकारी मोड",
+    "citizenMode": "नागरिक मोड",
+    "officerShort": "अधिकारी",
+    "citizenShort": "नागरिक"
   },
   "header": {
     "platformName": "भूमि सखा",

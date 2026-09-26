@@ -171,32 +171,22 @@ class BhoomiSakhaApp {
     const desktopNav = document.getElementById('mainNavigation');
     const mobileBtn = document.getElementById('mobileMenuToggleBtn');
     const ribbon = document.getElementById('secondaryContextRibbon');
-    const switcher = document.getElementById('portalSwitcherContainer');
     const notifBell = document.getElementById('notifBellBtn');
 
     if (!isAuthenticated) {
       if (desktopNav) desktopNav.classList.add('hidden');
       if (mobileBtn) mobileBtn.classList.add('hidden');
       if (ribbon) ribbon.classList.add('hidden');
-      if (switcher) switcher.classList.add('hidden');
       if (notifBell) notifBell.classList.add('hidden');
     } else {
       if (desktopNav) desktopNav.classList.remove('hidden');
       if (mobileBtn) mobileBtn.classList.remove('hidden');
       if (ribbon) ribbon.classList.remove('hidden');
       if (notifBell) notifBell.classList.remove('hidden');
-
-      // Citizen cannot access portal switcher
-      if (switcher) {
-        if (role === 'citizen') {
-          switcher.classList.add('hidden');
-        } else {
-          switcher.classList.remove('hidden');
-        }
-      }
-
       this.renderPortalNavigation();
     }
+
+    this.renderRoleIndicator();
   }
 
   setupNotificationBell() {
@@ -552,6 +542,8 @@ class BhoomiSakhaApp {
     const userContainer = document.getElementById('headerUserContainer');
     if (!userContainer) return;
 
+    this.renderRoleIndicator();
+
     const user = authService.getStoredUser();
 
     if (!user) {
@@ -650,31 +642,73 @@ class BhoomiSakhaApp {
     }
   }
 
+  renderRoleIndicator() {
+    const switcher = document.getElementById('portalSwitcherContainer');
+    if (!switcher) return;
+
+    const user = authService.getStoredUser();
+    if (!user) {
+      switcher.innerHTML = '';
+      switcher.classList.add('hidden');
+      return;
+    }
+
+    switcher.classList.remove('hidden');
+
+    if (user.role === 'super_admin') {
+      // Super admin can switch between Officer Command Center and Citizen Portal
+      switcher.innerHTML = `
+        <div class="flex items-center p-0.5 bg-surface-container rounded-lg border border-outline-variant/40 text-xs font-semibold">
+          <button id="switchToOfficerBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 ${this.currentPortal === 'officer' ? 'bg-primary text-on-primary shadow-xs font-semibold' : 'text-on-surface-variant hover:text-on-surface'}" title="Switch to Officer Command Center">
+            <span class="material-symbols-outlined text-[15px]">badge</span>
+            <span class="hidden md:inline">Officer</span>
+          </button>
+          <button id="switchToCitizenBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 ${this.currentPortal === 'citizen' ? 'bg-primary text-on-primary shadow-xs font-semibold' : 'text-on-surface-variant hover:text-on-surface'}" title="Switch to Citizen Portal">
+            <span class="material-symbols-outlined text-[15px]">person</span>
+            <span class="hidden md:inline">Citizen</span>
+          </button>
+        </div>
+      `;
+
+      const officerBtn = switcher.querySelector('#switchToOfficerBtn');
+      const citizenBtn = switcher.querySelector('#switchToCitizenBtn');
+      if (officerBtn) {
+        officerBtn.addEventListener('click', () => {
+          if (this.currentPortal !== 'officer') {
+            this.setPortalMode('officer', true);
+          }
+        });
+      }
+      if (citizenBtn) {
+        citizenBtn.addEventListener('click', () => {
+          if (this.currentPortal !== 'citizen') {
+            this.setPortalMode('citizen', true);
+          }
+        });
+      }
+    } else if (user.role === 'officer') {
+      // Normal Officer Account: Show Officer role indicator / mode, DO NOT show clickable Citizen switch button
+      switcher.innerHTML = `
+        <div class="px-2.5 py-1 rounded-md flex items-center gap-1.5 bg-surface-container-high text-on-surface border border-outline-variant/30 text-xs font-semibold select-none shadow-xs" id="portalRoleIndicator" title="${t('auth.officerWelcomeSubtitle', 'National Land Acquisition Command & Case Management Portal')}">
+          <span class="material-symbols-outlined text-[15px] text-primary">badge</span>
+          <span class="hidden md:inline">${t('auth.officerMode', 'Officer Mode')}</span>
+          <span class="md:hidden">${t('auth.officerShort', 'Officer')}</span>
+        </div>
+      `;
+    } else {
+      // Normal Citizen Account: Show Citizen mode, DO NOT show clickable Officer switch button
+      switcher.innerHTML = `
+        <div class="px-2.5 py-1 rounded-md flex items-center gap-1.5 bg-surface-container-high text-on-surface border border-outline-variant/30 text-xs font-semibold select-none shadow-xs" id="portalRoleIndicator" title="${t('citizen.portalTitle', 'Citizen Portal')}">
+          <span class="material-symbols-outlined text-[15px] text-primary">person</span>
+          <span class="hidden md:inline">${t('auth.citizenMode', 'Citizen Mode')}</span>
+          <span class="md:hidden">${t('auth.citizenShort', 'Citizen')}</span>
+        </div>
+      `;
+    }
+  }
+
   setupPortalSwitcher() {
-    const officerBtn = document.getElementById('switchToOfficerBtn');
-    const citizenBtn = document.getElementById('switchToCitizenBtn');
-
-    if (officerBtn) {
-      officerBtn.addEventListener('click', () => {
-        const user = authService.getStoredUser();
-        if (user && user.role === 'citizen') {
-          this.showToast(t('auth.officerAccessDenied', 'Unauthorized: Officer portal access denied for citizen accounts.'), 'warning');
-          return;
-        }
-        if (this.currentPortal !== 'officer') {
-          this.setPortalMode('officer', true);
-        }
-      });
-    }
-
-    if (citizenBtn) {
-      citizenBtn.addEventListener('click', () => {
-        if (this.currentPortal !== 'citizen') {
-          this.setPortalMode('citizen', true);
-        }
-      });
-    }
-
+    this.renderRoleIndicator();
     this.renderPortalNavigation();
   }
 
@@ -684,20 +718,11 @@ class BhoomiSakhaApp {
       this.showToast(t('auth.officerAccessDenied', 'Unauthorized: Officer portal access denied for citizen accounts.'), 'warning');
       return;
     }
+    if (user && user.role === 'officer' && mode === 'citizen' && user.role !== 'super_admin') {
+      return;
+    }
 
     this.currentPortal = mode;
-    const officerBtn = document.getElementById('switchToOfficerBtn');
-    const citizenBtn = document.getElementById('switchToCitizenBtn');
-
-    if (officerBtn && citizenBtn) {
-      if (mode === 'officer') {
-        officerBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs font-semibold';
-        citizenBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface';
-      } else {
-        citizenBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs font-semibold';
-        officerBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface';
-      }
-    }
 
     const breadcrumbRoot = document.getElementById('breadcrumbRoot');
     if (breadcrumbRoot) {
@@ -706,6 +731,7 @@ class BhoomiSakhaApp {
         : t('citizen.portalTitle', 'Citizen Portal');
     }
 
+    this.renderRoleIndicator();
     this.updateUserSessionUI();
     this.renderPortalNavigation();
 
@@ -726,11 +752,11 @@ class BhoomiSakhaApp {
 
     if (this.currentPortal === 'citizen') {
       desktopNav.innerHTML = `
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-dashboard" href="#/citizen-dashboard"><span>${t('nav.citizenDashboard', 'Dashboard')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-lands" href="#/citizen-lands"><span>${t('nav.citizenLands', 'My Land')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-risk" href="#/citizen-risk"><span>${t('nav.citizenRisk', 'Check Delay Risk')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-complaint" href="#/citizen-complaint"><span>${t('nav.citizenComplaint', 'File Grievance')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-cases" href="#/citizen-cases"><span>${t('nav.citizenCases', 'My Cases')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-dashboard" href="#/citizen-dashboard"><span>${t('nav.citizenDashboard', 'Dashboard')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-lands" href="#/citizen-lands"><span>${t('nav.citizenLands', 'My Land')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-risk" href="#/citizen-risk"><span>${t('nav.citizenRisk', 'Check Delay Risk')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-complaint" href="#/citizen-complaint"><span>${t('nav.citizenComplaint', 'File Grievance')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-cases" href="#/citizen-cases"><span>${t('nav.citizenCases', 'My Cases')}</span></a>
       `;
 
       mobileNav.innerHTML = `
@@ -761,17 +787,17 @@ class BhoomiSakhaApp {
       `;
     } else {
       desktopNav.innerHTML = `
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard"><span>${t('nav.dashboard', 'Command Center')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="cases" href="#/cases"><span>${t('nav.cases', 'Case Queue')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment"><span>${t('nav.assessment', 'Risk Assessment')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects"><span>${t('nav.projects', 'Projects Directory')}</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit"><span>${t('nav.audit', 'Audit Detail')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard"><span>${t('nav.dashboard', 'Dashboard')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="cases" href="#/cases"><span>${t('nav.cases', 'Case Queue')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment"><span>${t('nav.assessment', 'Risk Assessment')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects"><span>${t('nav.projects', 'Projects Directory')}</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit"><span>${t('nav.audit', 'Audit Detail')}</span></a>
       `;
 
       mobileNav.innerHTML = `
         <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="dashboard" href="#/dashboard">
           <span class="material-symbols-outlined text-[18px]">dashboard</span>
-          <span>${t('nav.dashboard', 'Command Center')}</span>
+          <span>${t('nav.dashboard', 'Dashboard')}</span>
         </a>
         <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="cases" href="#/cases">
           <span class="material-symbols-outlined text-[18px]">gavel</span>
@@ -825,10 +851,10 @@ class BhoomiSakhaApp {
         }
       } else {
         if (isTarget) {
-          t.className = 'nav-tab px-space-md py-1.5 transition-colors bg-primary-container text-on-primary font-label-md rounded-lg shadow-sm font-semibold focus-visible:ring-2 focus-visible:ring-primary';
+          t.className = 'nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-colors bg-primary-container text-on-primary font-semibold rounded-md shadow-xs focus-visible:ring-2 focus-visible:ring-primary';
           t.setAttribute('aria-current', 'page');
         } else {
-          t.className = 'nav-tab px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded focus-visible:ring-2 focus-visible:ring-primary';
+          t.className = 'nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container/60 transition-colors rounded-md focus-visible:ring-2 focus-visible:ring-primary';
           t.removeAttribute('aria-current');
         }
       }

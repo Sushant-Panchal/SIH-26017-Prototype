@@ -38,7 +38,11 @@ export default {
     "signedOutToast": "Signed out successfully.",
     "accessDeniedCitizen": "Access Restricted: Citizen accounts cannot access the Officer Command Center.",
     "accessDeniedOfficer": "Access Restricted: Officer accounts cannot access Citizen-only views directly.",
-    "sessionVerifying": "Verifying secure cadastral session..."
+    "sessionVerifying": "Verifying secure cadastral session...",
+    "officerMode": "Officer Mode",
+    "citizenMode": "Citizen Mode",
+    "officerShort": "Officer",
+    "citizenShort": "Citizen"
   },
   "header": {
     "platformName": "Bhoomi Sakha",

@@ -207,11 +207,12 @@
       </div>
 
       <!-- Desktop Navigation Tabs -->
-      <nav class="hidden xl:flex items-center gap-space-xs bg-surface-container-low p-1 rounded-lg border border-outline-variant/30" id="mainNavigation" role="navigation" aria-label="Main Navigation">
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard"><span>Dashboard</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment"><span>Risk Assessment</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects"><span>Projects Directory</span></a>
-        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit"><span>Audit Detail</span></a>
+      <nav class="hidden xl:flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-outline-variant/30" id="mainNavigation" role="navigation" aria-label="Main Navigation">
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard"><span>Dashboard</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="cases" href="#/cases"><span>Case Queue</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment"><span>Risk Assessment</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects"><span>Projects Directory</span></a>
+        <a class="nav-tab px-2.5 py-1 font-label-md text-label-md text-center leading-tight flex items-center justify-center transition-all rounded-md focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit"><span>Audit Detail</span></a>
       </nav>
 
       <!-- Engine Status, Presets & Officer Dossier -->
@@ -290,16 +291,9 @@
           <span class="material-symbols-outlined text-[22px]" id="mobileMenuIcon">menu</span>
         </button>
 
-        <!-- Portal Role Switcher -->
-        <div class="flex items-center p-0.5 bg-surface-container rounded-lg border border-outline-variant/40 text-xs font-semibold" id="portalSwitcherContainer">
-          <button id="switchToOfficerBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs" title="Switch to Officer Command Center">
-            <span class="material-symbols-outlined text-[15px]">badge</span>
-            <span class="hidden md:inline">Officer</span>
-          </button>
-          <button id="switchToCitizenBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface" title="Switch to Citizen Portal">
-            <span class="material-symbols-outlined text-[15px]">person</span>
-            <span class="hidden md:inline">Citizen</span>
-          </button>
+        <!-- Portal Role Indicator / Switcher -->
+        <div class="flex items-center text-xs font-semibold" id="portalSwitcherContainer">
+          <!-- Dynamically populated based on authenticated user's role -->
         </div>
 
         <div class="h-6 w-[1px] bg-outline-variant/40 hidden sm:block"></div>
