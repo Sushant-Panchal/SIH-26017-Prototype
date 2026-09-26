@@ -1469,6 +1469,19 @@ export default {
         "actionLabel": "प्रकल्प निर्देशिका"
       }
     }
+  },
+  "realtime": {
+    "connected": "थेट अद्यतने सक्रिय आहेत",
+    "reconnecting": "थेट अद्यतनांशी पुन्हा जोडत आहे...",
+    "caseCreated": "नवीन तक्रार दाखल केली",
+    "caseAssigned": "प्रकरण अधिकाऱ्याकडे नियुक्त केले",
+    "caseStatusUpdated": "प्रकरणाची स्थिती अद्ययावत केली",
+    "documentRequested": "दस्तऐवजाची विनंती केली",
+    "documentUploaded": "प्रकरणात दस्तऐवज अपलोड केले",
+    "documentVerified": "दस्तऐवज यशस्वीरित्या सत्यापित केले",
+    "documentRejected": "दस्तऐवज पडताळणी नाकारली",
+    "caseEscalated": "प्रकरण वरिष्ठांकडे वर्ग केले",
+    "caseResolved": "प्रकरण यशस्वीरित्या निकाली काढले"
   }
 };
 

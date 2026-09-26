@@ -1469,6 +1469,19 @@ export default {
         "actionLabel": "परियोजना निर्देशिका"
       }
     }
+  },
+  "realtime": {
+    "connected": "लाइव अपडेट सक्रिय हैं",
+    "reconnecting": "लाइव अपडेट से पुनः कनेक्ट हो रहा है...",
+    "caseCreated": "नई शिकायत दर्ज की गई",
+    "caseAssigned": "मामला अधिकारी को सौंपा गया",
+    "caseStatusUpdated": "मामले की स्थिति अपडेट की गई",
+    "documentRequested": "सहायक दस्तावेज़ का अनुरोध किया गया",
+    "documentUploaded": "केस फ़ाइल में दस्तावेज़ अपलोड किया गया",
+    "documentVerified": "दस्तावेज़ सफलतापूर्वक सत्यापित किया गया",
+    "documentRejected": "दस्तावेज़ सत्यापन अस्वीकृत किया गया",
+    "caseEscalated": "मामला उच्च अधिकारी को अग्रेषित किया गया",
+    "caseResolved": "मामला सफलतापूर्वक हल हो गया"
   }
 };
 

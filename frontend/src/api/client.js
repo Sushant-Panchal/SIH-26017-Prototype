@@ -3,7 +3,7 @@
  * Handles communication with the FastAPI backend.
  */
 
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_URL : null;
   if (typeof window !== 'undefined') {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -18,7 +18,7 @@ const getApiBaseUrl = () => {
   return envUrl || 'http://127.0.0.1:8000';
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(message, status = null, details = null) {

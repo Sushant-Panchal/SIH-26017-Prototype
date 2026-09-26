@@ -9,8 +9,14 @@ import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
+import { realtimeService } from '../api/realtime.js';
 
 export async function renderCitizenDashboardView(container) {
+  if (container._cleanupRealtime) {
+    container._cleanupRealtime();
+    container._cleanupRealtime = null;
+  }
+
   const user = authService.getStoredUser();
   if (!user || user.role !== 'citizen') {
     renderAuthGateway(container, {
@@ -21,6 +27,14 @@ export async function renderCitizenDashboardView(container) {
     });
     return;
   }
+
+  // Real-time synchronization
+  const unsub = realtimeService.subscribeAll((eventType) => {
+    if (['case_created', 'case_assigned', 'status_changed', 'case_status_changed', 'document_requested', 'document_verified', 'document_rejected', 'case_resolved', 'reconnected'].includes(eventType)) {
+      loadCitizenDashboardData(user.user_id);
+    }
+  });
+  container._cleanupRealtime = unsub;
 
   container.innerHTML = `
     <div class="space-y-6 max-w-7xl mx-auto pb-12 animate-fade-in">

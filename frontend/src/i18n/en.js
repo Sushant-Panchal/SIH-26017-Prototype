@@ -1469,6 +1469,19 @@ export default {
         "actionLabel": "Projects Directory"
       }
     }
+  },
+  "realtime": {
+    "connected": "Live updates active",
+    "reconnecting": "Reconnecting to live updates...",
+    "caseCreated": "New grievance case filed",
+    "caseAssigned": "Case assigned to officer",
+    "caseStatusUpdated": "Case status updated",
+    "documentRequested": "Supporting document requested",
+    "documentUploaded": "Document uploaded to case dossier",
+    "documentVerified": "Document verified successfully",
+    "documentRejected": "Document verification rejected",
+    "caseEscalated": "Case escalated to higher authority",
+    "caseResolved": "Case resolved successfully"
   }
 };
 

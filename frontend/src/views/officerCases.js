@@ -8,6 +8,7 @@ import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
+import { realtimeService } from '../api/realtime.js';
 
 export async function renderOfficerCasesView(container) {
   const user = authService.getStoredUser();
@@ -157,6 +158,28 @@ export async function renderOfficerCasesView(container) {
   let currentPage = 1;
   const loadData = () => loadOfficerCasesData(currentPage);
 
+  // Real-time synchronization for officer queue
+  if (container._cleanupRealtime) {
+    container._cleanupRealtime();
+    container._cleanupRealtime = null;
+  }
+
+  const unsub = realtimeService.subscribeAll((eventType) => {
+    if ([
+      'case_created',
+      'case_assigned',
+      'status_changed',
+      'case_status_changed',
+      'document_uploaded',
+      'case_resolved',
+      'case_escalated',
+      'reconnected',
+    ].includes(eventType)) {
+      loadData();
+    }
+  });
+  container._cleanupRealtime = unsub;
+
   // Event listeners
   document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; loadData(); });
   document.getElementById('filterRisk').addEventListener('change', () => { currentPage = 1; loadData(); });
@@ -178,6 +201,7 @@ export async function renderOfficerCasesView(container) {
 
   loadData();
 }
+
 
 async function loadOfficerCasesData(page = 1) {
   const tableBody = document.getElementById('officerCasesTableBody');

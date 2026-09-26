@@ -10,6 +10,7 @@ from .inference import DelayPredictor
 from .database import init_indexes
 from .case_routes import router as case_router
 from .auth_routes import router as auth_router
+from .realtime import router as realtime_router
 
 
 MODEL_PATH = "models/baseline_model.json"
@@ -46,6 +47,9 @@ app.include_router(auth_router)
 
 # Persistent Case Management Router
 app.include_router(case_router)
+
+# Real-Time Event Stream Router
+app.include_router(realtime_router)
 
 
 # Load model once when API starts.

@@ -9,8 +9,14 @@ import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
+import { realtimeService } from '../api/realtime.js';
 
 export async function renderCitizenCaseTrackingView(container) {
+  if (container._cleanupRealtime) {
+    container._cleanupRealtime();
+    container._cleanupRealtime = null;
+  }
+
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const activeCaseId = urlParams.get('id');
 
@@ -24,6 +30,28 @@ export async function renderCitizenCaseTrackingView(container) {
     });
     return;
   }
+
+  // Subscribe to real-time case milestones, document requests, and status updates
+  const unsub = realtimeService.subscribeAll((eventType, payload) => {
+    if ([
+      'case_assigned',
+      'case_status_changed',
+      'status_changed',
+      'document_requested',
+      'document_uploaded',
+      'document_verified',
+      'document_rejected',
+      'case_escalated',
+      'case_resolved',
+      'case_event_added',
+      'reconnected',
+    ].includes(eventType)) {
+      const currentParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      const currentActiveId = currentParams.get('id');
+      loadCitizenCasesTracker(user.user_id, currentActiveId);
+    }
+  });
+  container._cleanupRealtime = unsub;
 
   container.innerHTML = `
     <div class="space-y-6 max-w-7xl mx-auto pb-12 animate-fade-in">

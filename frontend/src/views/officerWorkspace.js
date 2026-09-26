@@ -10,6 +10,7 @@ import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
+import { realtimeService } from '../api/realtime.js';
 
 const VALID_STATUS_TRANSITIONS = {
   submitted: ['received', 'assigned', 'under_review', 'rejected'],
@@ -26,6 +27,11 @@ const VALID_STATUS_TRANSITIONS = {
 };
 
 export async function renderOfficerWorkspaceView(container) {
+  if (container._cleanupRealtime) {
+    container._cleanupRealtime();
+    container._cleanupRealtime = null;
+  }
+
   const hash = window.location.hash;
   const queryString = hash.includes('?') ? hash.split('?')[1] : '';
   const urlParams = new URLSearchParams(queryString);
@@ -40,6 +46,17 @@ export async function renderOfficerWorkspaceView(container) {
       onLoginSuccess: () => renderOfficerWorkspaceView(container),
     });
     return;
+  }
+
+  // Real-time synchronization for active dossier
+  if (caseId) {
+    const unsub = realtimeService.subscribeAll((eventType, payload) => {
+      const evtCaseId = payload?.case_id || payload?.data?.case_id;
+      if (evtCaseId === caseId || eventType === 'reconnected') {
+        loadAndRenderWorkspace(caseId, officer, container);
+      }
+    });
+    container._cleanupRealtime = unsub;
   }
 
   if (!caseId) {

@@ -25,6 +25,7 @@ import { notificationStore } from './utils/notifications.js';
 import { themeManager } from './utils/theme.js';
 import { initInfoSystem } from './utils/infoModal.js';
 import { i18n, t } from './i18n/index.js';
+import { realtimeService } from './api/realtime.js';
 
 // ============================================================
 // ROUTE CLASSIFICATIONS & ROLE DEFINITIONS
@@ -68,6 +69,8 @@ class BhoomiSakhaApp {
   }
 
   init() {
+    window.bhoomiSakhaApp = this;
+
     // 1. Immediately render institutional authentication/loading splash
     // This prevents any flash of the Officer Dashboard before session resolution.
     this.renderAuthLoadingSplash();
@@ -132,10 +135,14 @@ class BhoomiSakhaApp {
         this.isAuthInitialized = true;
         this.setupUserSession();
         this.updateLanguageUI();
+        if (authService.isAuthenticated()) {
+          realtimeService.connect();
+        }
         this.handleRouting();
       }
     })();
   }
+
 
   /**
    * Renders a clean institutional splash screen during initial token validation
@@ -201,6 +208,14 @@ class BhoomiSakhaApp {
     }
     this.updateNotificationBadge();
     notificationStore.subscribe(() => this.updateNotificationBadge());
+
+    // Real-time notification updates
+    realtimeService.subscribe('notification_created', () => {
+      this.updateNotificationBadge();
+    });
+    realtimeService.subscribe('reconnected', () => {
+      this.updateNotificationBadge();
+    });
   }
 
   async updateNotificationBadge() {
@@ -623,6 +638,7 @@ class BhoomiSakhaApp {
 
     if (signOutBtn) {
       signOutBtn.addEventListener('click', async () => {
+        realtimeService.disconnect();
         await authService.logout();
         this.currentPortal = 'citizen';
         this.showToast(t('auth.signedOutToast', 'Signed out successfully.'), 'info');
@@ -1015,6 +1031,7 @@ class BhoomiSakhaApp {
       initialRole: this.pendingAuthRole,
       onAuthSuccess: (authUser) => {
         this.showToast(`Authenticated as ${authUser.name} (${authUser.role})`, 'success');
+        realtimeService.connect();
         this.updateUserSessionUI();
         this.updateShellVisibility(true, authUser.role);
         if (authUser.role === 'citizen') {

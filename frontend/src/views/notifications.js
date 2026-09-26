@@ -10,8 +10,21 @@ import { authService } from '../api/auth.js';
 import { tts } from '../utils/tts.js';
 import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
+import { realtimeService } from '../api/realtime.js';
 
 export async function renderNotificationsView(container, onStateChange) {
+  if (container._cleanupRealtime) {
+    container._cleanupRealtime();
+    container._cleanupRealtime = null;
+  }
+
+  const unsub = realtimeService.subscribeAll((eventType) => {
+    if (eventType === 'notification_created' || eventType === 'reconnected') {
+      renderNotificationsView(container, onStateChange);
+    }
+  });
+  container._cleanupRealtime = unsub;
+
   let activeFilter = 'all'; // 'all' | 'unread'
   const user = authService.getStoredUser();
 

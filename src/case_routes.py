@@ -187,9 +187,10 @@ async def append_case_event(
     comment: Optional[str] = None,
     is_internal: bool = False,
     metadata: Optional[dict] = None,
+    citizen_id: Optional[str] = None,
     db=None,
 ) -> dict:
-    """Append-only audit trail event creation."""
+    """Append-only audit trail event creation and real-time event dispatch."""
     if db is None:
         db = get_database()
     event_id = generate_prefixed_id("EVT")
@@ -208,6 +209,57 @@ async def append_case_event(
     }
     case_events = db.get_collection("case_events")
     await case_events.insert_one(event_doc)
+
+    # Real-time event publishing
+    try:
+        from .realtime import realtime_hub
+
+        target_roles = ["officer", "super_admin"]
+        target_user_ids = None
+
+        if not is_internal:
+            c_id = citizen_id
+            if not c_id:
+                cases = db.get_collection("cases")
+                case_item = await cases.find_one({"case_id": case_id}, {"citizen_id": 1})
+                if case_item:
+                    c_id = case_item.get("citizen_id")
+            if c_id:
+                target_user_ids = [c_id]
+
+        # Publish primary event
+        await realtime_hub.publish_event(
+            event_type=action,
+            data=sanitize_doc(event_doc),
+            target_user_ids=target_user_ids,
+            target_roles=target_roles,
+            case_id=case_id,
+            is_internal=is_internal,
+        )
+
+        # If action was status_changed to resolved or escalated, also publish semantic event
+        if action == "status_changed":
+            if new_status == "resolved":
+                await realtime_hub.publish_event(
+                    event_type="case_resolved",
+                    data=sanitize_doc(event_doc),
+                    target_user_ids=target_user_ids,
+                    target_roles=target_roles,
+                    case_id=case_id,
+                    is_internal=is_internal,
+                )
+            elif new_status == "escalated":
+                await realtime_hub.publish_event(
+                    event_type="case_escalated",
+                    data=sanitize_doc(event_doc),
+                    target_user_ids=target_user_ids,
+                    target_roles=target_roles,
+                    case_id=case_id,
+                    is_internal=is_internal,
+                )
+    except Exception as err:
+        logger.warning(f"Realtime dispatch skipped for event {event_id}: {err}")
+
     return event_doc
 
 
@@ -219,7 +271,7 @@ async def create_notification(
     case_id: Optional[str] = None,
     db=None,
 ) -> dict:
-    """Creates a persistent user notification."""
+    """Creates a persistent user notification and pushes real-time alert."""
     if db is None:
         db = get_database()
     notif_id = generate_prefixed_id("NTF")
@@ -236,7 +288,21 @@ async def create_notification(
     }
     notifs = db.get_collection("notifications")
     await notifs.insert_one(notif_doc)
+
+    # Real-time notification dispatch strictly targeted to recipient user
+    try:
+        from .realtime import realtime_hub
+        await realtime_hub.publish_event(
+            event_type="notification_created",
+            data=sanitize_doc(notif_doc),
+            target_user_ids=[user_id],
+            case_id=case_id,
+        )
+    except Exception as err:
+        logger.warning(f"Realtime dispatch skipped for notification {notif_id}: {err}")
+
     return notif_doc
+
 
 
 # ============================================================
