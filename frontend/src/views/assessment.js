@@ -1079,7 +1079,7 @@ function renderResults(container, result) {
   const offset = totalCircumference - (totalCircumference * (Math.min(100, Math.max(0, prob)) / 100));
   if (circleEl) {
     circleEl.style.strokeDashoffset = offset;
-    circleEl.className = `transition-all duration-700 ease-out ${getRiskStrokeColor(riskLevel)}`;
+    circleEl.setAttribute('class', `transition-all duration-700 ease-out ${getRiskStrokeColor(riskLevel)}`);
   }
 
   // Risk Badge styling
