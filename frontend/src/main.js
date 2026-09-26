@@ -1,6 +1,8 @@
 /**
  * Bhoomi Sakha - Main Application Entrypoint
- * Coordinates client-side routing, health polling, live time, and view lifecycles.
+ * Coordinates client-side routing, cryptographic session verification,
+ * role-based route guarding, application shell access control, health polling,
+ * live statutory clocks, and view lifecycles.
  */
 
 import { renderDashboardView } from './views/dashboard.js';
@@ -15,25 +17,62 @@ import { renderCitizenComplaintView } from './views/citizenComplaint.js';
 import { renderCitizenCaseTrackingView } from './views/citizenCaseTracking.js';
 import { renderOfficerCasesView } from './views/officerCases.js';
 import { renderOfficerWorkspaceView } from './views/officerWorkspace.js';
+import { renderLoginView } from './views/loginView.js';
 import { authService } from './api/auth.js';
-import { openAuthModal } from './components/authModal.js';
+import { caseService } from './api/cases.js';
 import { predictionService } from './api/prediction.js';
 import { notificationStore } from './utils/notifications.js';
 import { themeManager } from './utils/theme.js';
 import { initInfoSystem } from './utils/infoModal.js';
 import { i18n, t } from './i18n/index.js';
 
+// ============================================================
+// ROUTE CLASSIFICATIONS & ROLE DEFINITIONS
+// ============================================================
+
+export const PUBLIC_ROUTES = ['login', 'register'];
+
+export const CITIZEN_ROUTES = [
+  'citizen-dashboard',
+  'citizen-lands',
+  'citizen-risk',
+  'citizen-complaint',
+  'citizen-cases',
+];
+
+export const OFFICER_ROUTES = [
+  'dashboard',
+  'assessment',
+  'projects',
+  'audit',
+  'cases',
+  'officer-case-workspace',
+];
+
+export const SHARED_AUTH_ROUTES = [
+  'notifications',
+];
+
 class BhoomiSakhaApp {
   constructor() {
     this.container = document.getElementById('appViewContainer');
-    this.currentView = 'dashboard';
-    this.currentPortal = 'officer';
+    this.currentView = 'login';
+    this.currentPortal = 'citizen';
     this.isBackendOnline = false;
     this.healthInterval = null;
     this.clockInterval = null;
+    this.isAuthInitialized = false;
+    this.postLoginRedirect = null;
+    this.pendingAuthRole = 'citizen';
+    this.cachedMetadata = null;
   }
 
   init() {
+    // 1. Immediately render institutional authentication/loading splash
+    // This prevents any flash of the Officer Dashboard before session resolution.
+    this.renderAuthLoadingSplash();
+
+    // 2. Initialize core UI systems
     initInfoSystem();
     themeManager.init();
     this.setupThemeToggle();
@@ -41,28 +80,37 @@ class BhoomiSakhaApp {
     this.setupPortalSwitcher();
     this.setupNavigation();
     this.setupMobileMenu();
-    this.setupUserSession();
-    this.updateLanguageUI();
     this.setupClock();
     this.setupNotificationBell();
     this.startHealthPolling();
-    this.handleRouting();
 
+    // 3. Attach history and routing event listeners
     window.addEventListener('hashchange', () => this.handleRouting());
+    window.addEventListener('popstate', () => this.handleRouting());
 
+    // 4. Header brand navigation handler
     const brandBtn = document.getElementById('brandHeaderHome');
     if (brandBtn) {
-      brandBtn.addEventListener('click', () => {
-        window.location.hash = '#/dashboard';
-      });
+      const handleBrandClick = () => {
+        const user = authService.getStoredUser();
+        if (!user) {
+          window.location.hash = '#/login';
+        } else if (user.role === 'citizen') {
+          window.location.hash = '#/citizen-dashboard';
+        } else {
+          window.location.hash = '#/dashboard';
+        }
+      };
+      brandBtn.addEventListener('click', handleBrandClick);
       brandBtn.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          window.location.hash = '#/dashboard';
+          handleBrandClick();
         }
       });
     }
 
+    // 5. Backend health indicator click handler
     const backendPill = document.getElementById('backendStatusPill');
     if (backendPill) {
       backendPill.addEventListener('click', () => this.checkBackendHealth(true));
@@ -72,6 +120,75 @@ class BhoomiSakhaApp {
           this.checkBackendHealth(true);
         }
       });
+    }
+
+    // 6. Asynchronously restore & verify session before mounting application shell
+    (async () => {
+      try {
+        await authService.verifySession();
+      } catch (err) {
+        console.warn('Session verification error:', err);
+      } finally {
+        this.isAuthInitialized = true;
+        this.setupUserSession();
+        this.updateLanguageUI();
+        this.handleRouting();
+      }
+    })();
+  }
+
+  /**
+   * Renders a clean institutional splash screen during initial token validation
+   */
+  renderAuthLoadingSplash() {
+    if (!this.container) return;
+    this.container.innerHTML = `
+      <div class="min-h-[60vh] flex flex-col items-center justify-center text-center p-8 space-y-4 animate-fade-in" role="status" aria-live="polite">
+        <div class="relative w-16 h-16 flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full border-4 border-outline-variant/30"></div>
+          <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+          <span class="material-symbols-outlined text-[24px] text-primary">security</span>
+        </div>
+        <div class="space-y-1">
+          <h3 class="font-headline-sm text-base font-bold text-on-surface">Bhoomi Sakha Secure Gateway</h3>
+          <p class="font-body-sm text-xs text-on-surface-variant max-w-sm">Verifying institutional credentials & cryptographic session...</p>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Controls shell navigation visibility based on active authentication state
+   */
+  updateShellVisibility(isAuthenticated, role) {
+    const desktopNav = document.getElementById('mainNavigation');
+    const mobileBtn = document.getElementById('mobileMenuToggleBtn');
+    const ribbon = document.getElementById('secondaryContextRibbon');
+    const switcher = document.getElementById('portalSwitcherContainer');
+    const notifBell = document.getElementById('notifBellBtn');
+
+    if (!isAuthenticated) {
+      if (desktopNav) desktopNav.classList.add('hidden');
+      if (mobileBtn) mobileBtn.classList.add('hidden');
+      if (ribbon) ribbon.classList.add('hidden');
+      if (switcher) switcher.classList.add('hidden');
+      if (notifBell) notifBell.classList.add('hidden');
+    } else {
+      if (desktopNav) desktopNav.classList.remove('hidden');
+      if (mobileBtn) mobileBtn.classList.remove('hidden');
+      if (ribbon) ribbon.classList.remove('hidden');
+      if (notifBell) notifBell.classList.remove('hidden');
+
+      // Citizen cannot access portal switcher
+      if (switcher) {
+        if (role === 'citizen') {
+          switcher.classList.add('hidden');
+        } else {
+          switcher.classList.remove('hidden');
+        }
+      }
+
+      this.renderPortalNavigation();
     }
   }
 
@@ -86,10 +203,26 @@ class BhoomiSakhaApp {
     notificationStore.subscribe(() => this.updateNotificationBadge());
   }
 
-  updateNotificationBadge() {
-    const count = notificationStore.getUnreadCount();
+  async updateNotificationBadge() {
     const badge = document.getElementById('notifBellBadge');
     const bellBtn = document.getElementById('notifBellBtn');
+    const user = authService.getStoredUser();
+
+    let count = 0;
+    if (user && user.user_id) {
+      try {
+        const notifs = await caseService.getUserNotifications(user.user_id);
+        count = notifs.filter(n => !n.read).length;
+        if (count === 0 && user.role !== 'citizen') {
+          count = notificationStore.getUnreadCount();
+        }
+      } catch (_) {
+        count = user.role !== 'citizen' ? notificationStore.getUnreadCount() : 0;
+      }
+    } else {
+      count = notificationStore.getUnreadCount();
+    }
+
     if (badge) {
       if (count > 0) {
         badge.textContent = count > 9 ? '9+' : count;
@@ -184,19 +317,15 @@ class BhoomiSakhaApp {
     const optionBtns = document.querySelectorAll('.lang-option-btn');
 
     const updateUI = (lang) => {
-      if (currentLabel) {
-        currentLabel.textContent = lang.toUpperCase();
-      }
+      if (currentLabel) currentLabel.textContent = lang.toUpperCase();
       optionBtns.forEach(btn => {
         const itemLang = btn.getAttribute('data-lang');
         const check = btn.querySelector('.check-icon');
         if (itemLang === lang) {
           btn.classList.add('bg-surface-container', 'font-semibold');
-          btn.setAttribute('aria-selected', 'true');
           if (check) check.classList.remove('hidden');
         } else {
           btn.classList.remove('bg-surface-container', 'font-semibold');
-          btn.setAttribute('aria-selected', 'false');
           if (check) check.classList.add('hidden');
         }
       });
@@ -204,10 +333,6 @@ class BhoomiSakhaApp {
     };
 
     updateUI(i18n.getLanguage());
-    i18n.subscribe((lang) => {
-      updateUI(lang);
-      this.handleRouting();
-    });
 
     if (toggleBtn && menu) {
       toggleBtn.addEventListener('click', (e) => {
@@ -219,8 +344,8 @@ class BhoomiSakhaApp {
         } else {
           menu.classList.remove('hidden');
           toggleBtn.setAttribute('aria-expanded', 'true');
-          const activeBtn = menu.querySelector('[aria-selected="true"]') || optionBtns[0];
-          if (activeBtn) activeBtn.focus();
+          const firstBtn = menu.querySelector('.lang-option-btn');
+          if (firstBtn) firstBtn.focus();
         }
       });
 
@@ -228,6 +353,7 @@ class BhoomiSakhaApp {
         btn.addEventListener('click', () => {
           const selected = btn.getAttribute('data-lang');
           i18n.setLanguage(selected);
+          updateUI(selected);
           menu.classList.add('hidden');
           toggleBtn.setAttribute('aria-expanded', 'false');
           toggleBtn.focus();
@@ -301,13 +427,11 @@ class BhoomiSakhaApp {
   }
 
   updateLanguageUI() {
-    // 1. Document title
     const platformName = t('header.platformName', 'Bhoomi Sakha');
     const subtitle = t('header.subtitle', 'Predictive Land Acquisition Delay-Risk Platform');
     const badge = t('header.sihBadge', 'SIH 2026 • PS ID 26017');
     document.title = `${platformName} | ${subtitle} (${badge})`;
 
-    // 2. Navigation tabs
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(tab => {
       const target = tab.getAttribute('data-target');
@@ -317,10 +441,15 @@ class BhoomiSakhaApp {
       }
     });
 
-    // 3. Breadcrumb & View title
     const breadcrumbRoot = document.getElementById('breadcrumbRoot');
     if (breadcrumbRoot) {
-      breadcrumbRoot.textContent = t('header.commandCenter', 'Command Center');
+      if (!authService.isAuthenticated()) {
+        breadcrumbRoot.textContent = t('auth.loginTitle', 'Authentication Gate');
+      } else {
+        breadcrumbRoot.textContent = this.currentPortal === 'officer' 
+          ? t('header.commandCenter', 'Command Center') 
+          : t('citizen.portalTitle', 'Citizen Portal');
+      }
     }
 
     const breadcrumbLabel = document.getElementById('currentViewName');
@@ -328,7 +457,6 @@ class BhoomiSakhaApp {
       breadcrumbLabel.textContent = t(`views.${this.currentView}`, breadcrumbLabel.textContent);
     }
 
-    // 4. Header brand & badges
     const brandHeaderTitle = document.getElementById('brandHeaderTitle');
     if (brandHeaderTitle) brandHeaderTitle.textContent = platformName;
 
@@ -338,17 +466,14 @@ class BhoomiSakhaApp {
     const brandHeaderSubtitle = document.getElementById('brandHeaderSubtitle');
     if (brandHeaderSubtitle) brandHeaderSubtitle.textContent = subtitle;
 
-    // 5. User Session & Persona
     this.updateUserSessionUI();
 
-    // 6. Secondary ribbon
     const statutoryCutoffLabel = document.getElementById('statutoryCutoffLabel');
     if (statutoryCutoffLabel) statutoryCutoffLabel.textContent = t('header.statutoryCutoff', 'Statutory Cutoff: 48h Remaining');
 
     const liveISTLabel = document.getElementById('liveISTLabel');
     if (liveISTLabel) liveISTLabel.textContent = `${t('header.istClock', 'IST')}:`;
 
-    // 7. Civic Footer
     const footerDesc = document.getElementById('footerDescription');
     if (footerDesc) footerDesc.textContent = t('footer.description', footerDesc.textContent);
 
@@ -358,7 +483,6 @@ class BhoomiSakhaApp {
     const footerProtocol = document.getElementById('footerProtocol');
     if (footerProtocol) footerProtocol.textContent = t('footer.protocol', 'Precision Cadastral Verification Protocol v4.1');
 
-    // 8. Header action labels & accessibility
     const notifBellBtn = document.getElementById('notifBellBtn');
     if (notifBellBtn) notifBellBtn.setAttribute('title', t('header.openNotifications', 'System Notifications'));
 
@@ -379,7 +503,6 @@ class BhoomiSakhaApp {
       mobileMenuToggleBtn.setAttribute('aria-label', t('header.toggleMenu', 'Open navigation menu'));
     }
 
-    // 9. Update status text
     this.updateBackendStatusUI();
   }
 
@@ -427,19 +550,7 @@ class BhoomiSakhaApp {
       const signInBtn = document.getElementById('headerSignInBtn');
       if (signInBtn) {
         signInBtn.addEventListener('click', () => {
-          openAuthModal({
-            role: this.currentPortal,
-            onSuccess: (authUser) => {
-              this.showToast(`Signed in as ${authUser.name} (${authUser.role})`, 'success');
-              if (authUser.role === 'citizen' && this.currentPortal !== 'citizen') {
-                this.setPortalMode('citizen', true);
-              } else if (authUser.role === 'officer' && this.currentPortal !== 'officer') {
-                this.setPortalMode('officer', true);
-              } else {
-                this.handleRouting();
-              }
-            },
-          });
+          window.location.hash = '#/login';
         });
       }
       return;
@@ -513,8 +624,11 @@ class BhoomiSakhaApp {
     if (signOutBtn) {
       signOutBtn.addEventListener('click', async () => {
         await authService.logout();
+        this.currentPortal = 'citizen';
         this.showToast(t('auth.signedOutToast', 'Signed out successfully.'), 'info');
         this.updateUserSessionUI();
+        this.updateShellVisibility(false);
+        window.location.hash = '#/login';
         this.handleRouting();
       });
     }
@@ -526,6 +640,11 @@ class BhoomiSakhaApp {
 
     if (officerBtn) {
       officerBtn.addEventListener('click', () => {
+        const user = authService.getStoredUser();
+        if (user && user.role === 'citizen') {
+          this.showToast(t('auth.officerAccessDenied', 'Unauthorized: Officer portal access denied for citizen accounts.'), 'warning');
+          return;
+        }
         if (this.currentPortal !== 'officer') {
           this.setPortalMode('officer', true);
         }
@@ -544,6 +663,12 @@ class BhoomiSakhaApp {
   }
 
   setPortalMode(mode, navigate = false) {
+    const user = authService.getStoredUser();
+    if (user && user.role === 'citizen' && mode === 'officer') {
+      this.showToast(t('auth.officerAccessDenied', 'Unauthorized: Officer portal access denied for citizen accounts.'), 'warning');
+      return;
+    }
+
     this.currentPortal = mode;
     const officerBtn = document.getElementById('switchToOfficerBtn');
     const citizenBtn = document.getElementById('switchToCitizenBtn');
@@ -558,7 +683,6 @@ class BhoomiSakhaApp {
       }
     }
 
-    // Update Breadcrumb
     const breadcrumbRoot = document.getElementById('breadcrumbRoot');
     if (breadcrumbRoot) {
       breadcrumbRoot.textContent = mode === 'officer' 
@@ -700,23 +824,111 @@ class BhoomiSakhaApp {
     }
   }
 
+  updateBreadcrumbsForAuth(path) {
+    const breadcrumbRoot = document.getElementById('breadcrumbRoot');
+    const breadcrumbLabel = document.getElementById('currentViewName');
+    if (breadcrumbRoot) {
+      breadcrumbRoot.textContent = t('auth.loginTitle', 'Authentication Gate');
+    }
+    if (breadcrumbLabel) {
+      breadcrumbLabel.textContent = path === 'register' ? t('auth.registerTab', 'Registration') : t('auth.loginTab', 'Sign In');
+    }
+  }
+
+  /**
+   * Centralized Application Router & Route Guard
+   * Enforces authentication gates and role isolation before mounting any view.
+   */
   handleRouting() {
-    const hash = window.location.hash || '#/dashboard';
-    const [path, queryString] = hash.replace('#/', '').split('?');
-    const params = new URLSearchParams(queryString || '');
-
-    this.currentView = path || 'dashboard';
-
-    // Auto-detect portal based on route prefix
-    if (this.currentView.startsWith('citizen-') && this.currentPortal !== 'citizen') {
-      this.setPortalMode('citizen', false);
-    } else if (!this.currentView.startsWith('citizen-') && this.currentView !== 'notifications' && this.currentPortal !== 'officer') {
-      this.setPortalMode('officer', false);
+    if (!this.isAuthInitialized) {
+      return; // Verification splash loader is active
     }
 
+    const rawHash = window.location.hash || '';
+    const cleanHash = rawHash.replace(/^#\/?/, '');
+    const [path, queryString] = cleanHash.split('?');
+    const params = new URLSearchParams(queryString || '');
+
+    const isAuth = authService.isAuthenticated();
+    const user = authService.getStoredUser();
+
+    // Synchronize shell visibility
+    this.updateShellVisibility(isAuth, user?.role);
+
+    // ========================================================
+    // CASE 1: Unauthenticated Visitor
+    // ========================================================
+    if (!isAuth) {
+      if (path === 'login' || path === 'register') {
+        this.currentView = path;
+        this.updateBreadcrumbsForAuth(path);
+        this.renderLoginViewComponent(path);
+        return;
+      }
+
+      // Intercepted protected route: store redirect and route to login
+      if (cleanHash && cleanHash !== 'login' && cleanHash !== 'register') {
+        this.postLoginRedirect = rawHash;
+        if (cleanHash.startsWith('citizen-')) {
+          this.pendingAuthRole = 'citizen';
+        } else if (OFFICER_ROUTES.includes(cleanHash)) {
+          this.pendingAuthRole = 'officer';
+        }
+      }
+
+      window.location.hash = '#/login';
+      this.currentView = 'login';
+      this.updateBreadcrumbsForAuth('login');
+      this.renderLoginViewComponent('login');
+      return;
+    }
+
+    // ========================================================
+    // CASE 2: Authenticated User
+    // ========================================================
+    // Prevent authenticated users from lingering on login/register
+    if (path === 'login' || path === 'register' || !path) {
+      const destination = (user.role === 'citizen') ? '#/citizen-dashboard' : '#/dashboard';
+      window.location.hash = destination;
+      return;
+    }
+
+    // Enforce Citizen Role Isolation
+    if (user.role === 'citizen') {
+      if (OFFICER_ROUTES.includes(path)) {
+        this.showToast(t('auth.officerAccessDenied', 'Unauthorized: Officer portal access denied for citizen accounts.'), 'warning');
+        window.location.hash = '#/citizen-dashboard';
+        return;
+      }
+      if (!CITIZEN_ROUTES.includes(path) && !SHARED_AUTH_ROUTES.includes(path)) {
+        window.location.hash = '#/citizen-dashboard';
+        return;
+      }
+      if (this.currentPortal !== 'citizen') {
+        this.setPortalMode('citizen', false);
+      }
+    }
+    // Enforce Officer Role Isolation
+    else if (user.role === 'officer' || user.role === 'super_admin') {
+      if (CITIZEN_ROUTES.includes(path)) {
+        this.showToast(t('auth.citizenAccessDenied', 'Unauthorized: Citizen-only portal route. Use Officer Case Queue.'), 'warning');
+        window.location.hash = '#/dashboard';
+        return;
+      }
+      if (!OFFICER_ROUTES.includes(path) && !SHARED_AUTH_ROUTES.includes(path)) {
+        window.location.hash = '#/dashboard';
+        return;
+      }
+      if (this.currentPortal !== 'officer') {
+        this.setPortalMode('officer', false);
+      }
+    }
+
+    this.currentView = path;
     this.updateNavState(this.currentView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    // Render authorized view
     switch (this.currentView) {
       case 'citizen-dashboard':
         renderCitizenDashboardView(this.container);
@@ -792,6 +1004,41 @@ class BhoomiSakhaApp {
         );
         break;
     }
+  }
+
+  /**
+   * Renders the production authentication component
+   */
+  renderLoginViewComponent(mode = 'login') {
+    renderLoginView(this.container, {
+      mode,
+      initialRole: this.pendingAuthRole,
+      onAuthSuccess: (authUser) => {
+        this.showToast(`Authenticated as ${authUser.name} (${authUser.role})`, 'success');
+        this.updateUserSessionUI();
+        this.updateShellVisibility(true, authUser.role);
+        if (authUser.role === 'citizen') {
+          this.setPortalMode('citizen', false);
+        } else {
+          this.setPortalMode('officer', false);
+        }
+
+        // Determine destination after login
+        let target = (authUser.role === 'citizen') ? '#/citizen-dashboard' : '#/dashboard';
+        if (this.postLoginRedirect) {
+          const redirectHash = this.postLoginRedirect;
+          const cleanRedirect = redirectHash.replace(/^#\/?/, '').split('?')[0];
+          const isAllowed = (authUser.role === 'citizen')
+            ? (CITIZEN_ROUTES.includes(cleanRedirect) || SHARED_AUTH_ROUTES.includes(cleanRedirect))
+            : (OFFICER_ROUTES.includes(cleanRedirect) || SHARED_AUTH_ROUTES.includes(cleanRedirect));
+          if (isAllowed) {
+            target = redirectHash;
+          }
+          this.postLoginRedirect = null;
+        }
+        window.location.hash = target;
+      }
+    });
   }
 
   setupClock() {
