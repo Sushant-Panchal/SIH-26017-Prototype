@@ -328,3 +328,13 @@ export function initInfoSystem() {
     }
   });
 }
+
+/**
+ * Idempotent hook for views to attach or re-verify info tooltips.
+ * Global event delegation is active via initInfoSystem().
+ */
+export function attachInfoTooltips(container = document) {
+  // Global document listener handles all [data-info-key] and .info-btn elements
+  return;
+}
+

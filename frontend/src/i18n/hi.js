@@ -27,17 +27,30 @@ export default {
   },
   "nav": {
     "dashboard": "डैशबोर्ड",
+    "cases": "मामला कतार",
     "assessment": "जोखिम आकलन",
     "projects": "परियोजना निर्देशिका",
     "audit": "ऑडिट विवरण",
-    "notifications": "अधिसूचनाएं"
+    "notifications": "अधिसूचनाएं",
+    "citizenDashboard": "डैशबोर्ड",
+    "citizenLands": "मेरी भूमि",
+    "citizenRisk": "विलंब जोखिम जांचें",
+    "citizenComplaint": "शिकायत दर्ज करें",
+    "citizenCases": "मेरे मामले"
   },
   "views": {
     "dashboard": "राष्ट्रीय कैडस्ट्रल मैट्रिक्स (सिंहावलोकन)",
+    "cases": "भूमि अधिग्रहण शिकायत एवं मामला कतार",
+    "officer-case-workspace": "अधिकारी मामला कार्यक्षेत्र एवं डोजियर",
     "assessment": "पूर्वानुमानित विलंब-जोखिम आकलन कॉकपिट",
     "projects": "राष्ट्रीय भूमि अधिग्रहण परियोजना निर्देशिका",
     "audit": "कैडस्ट्रल एवं जोखिम विस्तृत डोजियर",
-    "notifications": "प्रणाली अधिसूचनाएं एवं परिचालन अलर्ट"
+    "notifications": "प्रणाली अधिसूचनाएं एवं परिचालन अलर्ट",
+    "citizen-dashboard": "नागरिक अधिग्रहण डैशबोर्ड",
+    "citizen-lands": "भूमि पार्सल एवं कैडस्ट्रल अभिलेख",
+    "citizen-risk": "भूमि अधिग्रहण विलंब जोखिम अनुमानक",
+    "citizen-complaint": "भूमि अधिग्रहण शिकायत दर्ज करें",
+    "citizen-cases": "शिकायत डोजियर एवं लाइव ट्रैकिंग"
   },
   "dropdown": {
     "project_type": {

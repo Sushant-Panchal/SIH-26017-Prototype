@@ -178,7 +178,7 @@
       }
     };
   </script>
-  <script type="module" crossorigin src="/assets/index-BlmvBCAr.js"></script>
+  <script type="module" crossorigin src="/assets/index-gQE-g55O.js"></script>
 </head>
 <body class="bg-background font-body-md text-on-surface antialiased selection:bg-secondary-container selection:text-on-surface min-h-screen flex flex-col justify-between">
 
@@ -290,6 +290,18 @@
         <button id="mobileMenuToggleBtn" type="button" class="xl:hidden p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobileNavigationMenu">
           <span class="material-symbols-outlined text-[22px]" id="mobileMenuIcon">menu</span>
         </button>
+
+        <!-- Portal Role Switcher -->
+        <div class="flex items-center p-0.5 bg-surface-container rounded-lg border border-outline-variant/40 text-xs font-semibold" id="portalSwitcherContainer">
+          <button id="switchToOfficerBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs" title="Switch to Officer Command Center">
+            <span class="material-symbols-outlined text-[15px]">badge</span>
+            <span class="hidden md:inline">Officer</span>
+          </button>
+          <button id="switchToCitizenBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface" title="Switch to Citizen Portal">
+            <span class="material-symbols-outlined text-[15px]">person</span>
+            <span class="hidden md:inline">Citizen</span>
+          </button>
+        </div>
 
         <div class="h-6 w-[1px] bg-outline-variant/40 hidden sm:block"></div>
 

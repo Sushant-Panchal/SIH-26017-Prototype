@@ -27,17 +27,30 @@ export default {
   },
   "nav": {
     "dashboard": "Dashboard",
+    "cases": "Case Queue",
     "assessment": "Risk Assessment",
     "projects": "Projects Directory",
     "audit": "Audit Detail",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "citizenDashboard": "Dashboard",
+    "citizenLands": "My Land",
+    "citizenRisk": "Check Delay Risk",
+    "citizenComplaint": "File Grievance",
+    "citizenCases": "My Cases"
   },
   "views": {
     "dashboard": "National Cadastral Matrix (Overview)",
+    "cases": "Acquisition Grievance & Case Queue",
+    "officer-case-workspace": "Officer Case Workspace & Dossier",
     "assessment": "Predictive Delay-Risk Assessment Cockpit",
     "projects": "National Land Acquisition Projects Directory",
     "audit": "Cadastral & Risk Detailed Dossier",
-    "notifications": "System Notifications & Operational Alerts"
+    "notifications": "System Notifications & Operational Alerts",
+    "citizen-dashboard": "Citizen Acquisition Dashboard",
+    "citizen-lands": "Land Parcel & Cadastral Records",
+    "citizen-risk": "Land Acquisition Delay Risk Estimator",
+    "citizen-complaint": "File Land Acquisition Grievance",
+    "citizen-cases": "Grievance Dossier & Live Tracking"
   },
   "dropdown": {
     "project_type": {

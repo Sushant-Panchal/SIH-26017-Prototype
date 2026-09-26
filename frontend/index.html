@@ -290,6 +290,18 @@
           <span class="material-symbols-outlined text-[22px]" id="mobileMenuIcon">menu</span>
         </button>
 
+        <!-- Portal Role Switcher -->
+        <div class="flex items-center p-0.5 bg-surface-container rounded-lg border border-outline-variant/40 text-xs font-semibold" id="portalSwitcherContainer">
+          <button id="switchToOfficerBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs" title="Switch to Officer Command Center">
+            <span class="material-symbols-outlined text-[15px]">badge</span>
+            <span class="hidden md:inline">Officer</span>
+          </button>
+          <button id="switchToCitizenBtn" type="button" class="px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface" title="Switch to Citizen Portal">
+            <span class="material-symbols-outlined text-[15px]">person</span>
+            <span class="hidden md:inline">Citizen</span>
+          </button>
+        </div>
+
         <div class="h-6 w-[1px] bg-outline-variant/40 hidden sm:block"></div>
 
         <!-- Officer Persona -->

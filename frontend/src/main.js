@@ -8,6 +8,14 @@ import { renderAssessmentView } from './views/assessment.js';
 import { renderProjectsView } from './views/projects.js';
 import { renderDetailView } from './views/detail.js';
 import { renderNotificationsView } from './views/notifications.js';
+import { renderCitizenDashboardView } from './views/citizenDashboard.js';
+import { renderCitizenLandView } from './views/citizenLand.js';
+import { renderCitizenRiskView } from './views/citizenRisk.js';
+import { renderCitizenComplaintView } from './views/citizenComplaint.js';
+import { renderCitizenCaseTrackingView } from './views/citizenCaseTracking.js';
+import { renderOfficerCasesView } from './views/officerCases.js';
+import { renderOfficerWorkspaceView } from './views/officerWorkspace.js';
+import { authService } from './api/auth.js';
 import { predictionService } from './api/prediction.js';
 import { notificationStore } from './utils/notifications.js';
 import { themeManager } from './utils/theme.js';
@@ -18,6 +26,7 @@ class BhoomiSakhaApp {
   constructor() {
     this.container = document.getElementById('appViewContainer');
     this.currentView = 'dashboard';
+    this.currentPortal = 'officer';
     this.isBackendOnline = false;
     this.healthInterval = null;
     this.clockInterval = null;
@@ -28,6 +37,7 @@ class BhoomiSakhaApp {
     themeManager.init();
     this.setupThemeToggle();
     this.setupLanguageToggle();
+    this.setupPortalSwitcher();
     this.setupNavigation();
     this.setupMobileMenu();
     this.updateLanguageUI();
@@ -389,6 +399,151 @@ class BhoomiSakhaApp {
     }
   }
 
+  setupPortalSwitcher() {
+    const officerBtn = document.getElementById('switchToOfficerBtn');
+    const citizenBtn = document.getElementById('switchToCitizenBtn');
+
+    if (officerBtn) {
+      officerBtn.addEventListener('click', () => {
+        if (this.currentPortal !== 'officer') {
+          this.setPortalMode('officer', true);
+        }
+      });
+    }
+
+    if (citizenBtn) {
+      citizenBtn.addEventListener('click', () => {
+        if (this.currentPortal !== 'citizen') {
+          this.setPortalMode('citizen', true);
+        }
+      });
+    }
+
+    this.renderPortalNavigation();
+  }
+
+  setPortalMode(mode, navigate = false) {
+    this.currentPortal = mode;
+    const officerBtn = document.getElementById('switchToOfficerBtn');
+    const citizenBtn = document.getElementById('switchToCitizenBtn');
+
+    if (officerBtn && citizenBtn) {
+      if (mode === 'officer') {
+        officerBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs font-semibold';
+        citizenBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface';
+      } else {
+        citizenBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 bg-primary text-on-primary shadow-xs font-semibold';
+        officerBtn.className = 'px-2 py-1 rounded transition-all flex items-center gap-1 text-on-surface-variant hover:text-on-surface';
+      }
+    }
+
+    // Update Persona in header
+    const officerName = document.getElementById('officerName');
+    const officerRole = document.getElementById('officerRole');
+    const breadcrumbRoot = document.getElementById('breadcrumbRoot');
+
+    if (mode === 'officer') {
+      if (officerName) officerName.textContent = t('header.officerName', 'Dr. Sunita Deshmukh');
+      if (officerRole) officerRole.textContent = t('header.officerRole', 'IAS, Land Commissioner');
+      if (breadcrumbRoot) breadcrumbRoot.textContent = t('header.commandCenter', 'Command Center');
+    } else {
+      if (officerName) officerName.textContent = 'Rameshwar Patil';
+      if (officerRole) officerRole.textContent = 'Citizen / Landowner';
+      if (breadcrumbRoot) breadcrumbRoot.textContent = 'Citizen Portal';
+    }
+
+    this.renderPortalNavigation();
+
+    if (navigate) {
+      if (mode === 'officer') {
+        window.location.hash = '#/dashboard';
+      } else {
+        window.location.hash = '#/citizen-dashboard';
+      }
+    }
+  }
+
+  renderPortalNavigation() {
+    const desktopNav = document.getElementById('mainNavigation');
+    const mobileNav = document.getElementById('mobileNavigationMenu');
+
+    if (!desktopNav || !mobileNav) return;
+
+    if (this.currentPortal === 'citizen') {
+      desktopNav.innerHTML = `
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-dashboard" href="#/citizen-dashboard"><span>${t('nav.citizenDashboard', 'Dashboard')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-lands" href="#/citizen-lands"><span>${t('nav.citizenLands', 'My Land')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-risk" href="#/citizen-risk"><span>${t('nav.citizenRisk', 'Check Delay Risk')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-complaint" href="#/citizen-complaint"><span>${t('nav.citizenComplaint', 'File Grievance')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="citizen-cases" href="#/citizen-cases"><span>${t('nav.citizenCases', 'My Cases')}</span></a>
+      `;
+
+      mobileNav.innerHTML = `
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="citizen-dashboard" href="#/citizen-dashboard">
+          <span class="material-symbols-outlined text-[18px]">dashboard</span>
+          <span>${t('nav.citizenDashboard', 'Dashboard')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="citizen-lands" href="#/citizen-lands">
+          <span class="material-symbols-outlined text-[18px]">terrain</span>
+          <span>${t('nav.citizenLands', 'My Land')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="citizen-risk" href="#/citizen-risk">
+          <span class="material-symbols-outlined text-[18px]">psychology</span>
+          <span>${t('nav.citizenRisk', 'Check Delay Risk')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="citizen-complaint" href="#/citizen-complaint">
+          <span class="material-symbols-outlined text-[18px]">report_problem</span>
+          <span>${t('nav.citizenComplaint', 'File Grievance')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="citizen-cases" href="#/citizen-cases">
+          <span class="material-symbols-outlined text-[18px]">assignment</span>
+          <span>${t('nav.citizenCases', 'My Cases')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="notifications" href="#/notifications">
+          <span class="material-symbols-outlined text-[18px]">notifications</span>
+          <span>${t('nav.notifications', 'Notifications')}</span>
+        </a>
+      `;
+    } else {
+      desktopNav.innerHTML = `
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="dashboard" href="#/dashboard"><span>${t('nav.dashboard', 'Command Center')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="cases" href="#/cases"><span>${t('nav.cases', 'Case Queue')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="assessment" href="#/assessment"><span>${t('nav.assessment', 'Risk Assessment')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="projects" href="#/projects"><span>${t('nav.projects', 'Projects Directory')}</span></a>
+        <a class="nav-tab px-space-md py-1.5 font-label-md text-label-md transition-all rounded-lg focus-visible:ring-2 focus-visible:ring-primary" data-target="audit" href="#/audit"><span>${t('nav.audit', 'Audit Detail')}</span></a>
+      `;
+
+      mobileNav.innerHTML = `
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="dashboard" href="#/dashboard">
+          <span class="material-symbols-outlined text-[18px]">dashboard</span>
+          <span>${t('nav.dashboard', 'Command Center')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="cases" href="#/cases">
+          <span class="material-symbols-outlined text-[18px]">gavel</span>
+          <span>${t('nav.cases', 'Case Queue')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="assessment" href="#/assessment">
+          <span class="material-symbols-outlined text-[18px]">analytics</span>
+          <span>${t('nav.assessment', 'Risk Assessment')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="projects" href="#/projects">
+          <span class="material-symbols-outlined text-[18px]">folder_open</span>
+          <span>${t('nav.projects', 'Projects Directory')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="audit" href="#/audit">
+          <span class="material-symbols-outlined text-[18px]">description</span>
+          <span>${t('nav.audit', 'Audit Detail')}</span>
+        </a>
+        <a class="nav-tab mobile-nav-tab px-3 py-2 font-label-md text-label-md rounded-lg flex items-center gap-2.5 transition-colors focus:ring-2 focus:ring-primary" data-target="notifications" href="#/notifications">
+          <span class="material-symbols-outlined text-[18px]">notifications</span>
+          <span>${t('nav.notifications', 'Notifications')}</span>
+        </a>
+      `;
+    }
+
+    this.setupNavigation();
+  }
+
   setupNavigation() {
     const navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(tab => {
@@ -426,7 +581,7 @@ class BhoomiSakhaApp {
 
     const breadcrumbLabel = document.getElementById('currentViewName');
     if (breadcrumbLabel) {
-      breadcrumbLabel.textContent = t(`views.${target}`, 'Executive Command Center');
+      breadcrumbLabel.textContent = t(`views.${target}`, target.replace(/-/g, ' ').toUpperCase());
     }
   }
 
@@ -436,11 +591,46 @@ class BhoomiSakhaApp {
     const params = new URLSearchParams(queryString || '');
 
     this.currentView = path || 'dashboard';
-    this.updateNavState(this.currentView);
 
+    // Auto-detect portal based on route prefix
+    if (this.currentView.startsWith('citizen-') && this.currentPortal !== 'citizen') {
+      this.setPortalMode('citizen', false);
+    } else if (!this.currentView.startsWith('citizen-') && this.currentView !== 'notifications' && this.currentPortal !== 'officer') {
+      this.setPortalMode('officer', false);
+    }
+
+    this.updateNavState(this.currentView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     switch (this.currentView) {
+      case 'citizen-dashboard':
+        renderCitizenDashboardView(this.container);
+        break;
+
+      case 'citizen-lands':
+        renderCitizenLandView(this.container);
+        break;
+
+      case 'citizen-risk':
+        renderCitizenRiskView(this.container);
+        break;
+
+      case 'citizen-complaint':
+        renderCitizenComplaintView(this.container);
+        break;
+
+      case 'citizen-cases':
+        renderCitizenCaseTrackingView(this.container);
+        break;
+
+      case 'cases':
+        renderOfficerCasesView(this.container);
+        break;
+
+      case 'officer-case-workspace':
+        renderOfficerWorkspaceView(this.container);
+        break;
+
       case 'notifications':
         renderNotificationsView(this.container, () => this.updateNotificationBadge());
         break;

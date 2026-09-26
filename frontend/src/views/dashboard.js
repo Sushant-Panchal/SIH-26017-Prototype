@@ -14,6 +14,7 @@ import { createReadAloudButton } from '../utils/tts.js';
 import { attachMicToInput } from '../utils/stt.js';
 import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
+import { caseService } from '../api/cases.js';
 
 export function renderDashboardView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -142,6 +143,52 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               </div>
             </div>
 
+          </div>
+
+          <!-- Case Intelligence & Citizen Grievance Matrix (Phase 14) -->
+          <div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-outline-variant/20 pb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-primary-container text-on-primary flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[18px]">gavel</span>
+                </span>
+                <div>
+                  <h3 class="font-headline-sm text-sm sm:text-base font-bold text-on-surface">${t('dashboard.caseMatrixTitle', 'Citizen Grievance & Case Intelligence Matrix')}</h3>
+                  <span class="text-xs text-on-surface-variant">${t('dashboard.caseMatrixSub', 'Shared persistence layer bridging citizen grievances, document requests, and officer intervention')}</span>
+                </div>
+              </div>
+              <a href="#/cases" class="px-3 py-1.5 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 flex items-center gap-1 self-start sm:self-auto transition-all shadow-xs">
+                <span>${t('dashboard.openCaseQueue', 'Open Case Queue')}</span>
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </a>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
+                <span class="text-[10px] font-bold text-on-surface-variant uppercase block">Total Cases</span>
+                <div class="text-xl font-bold font-tabular-data text-on-surface mt-0.5" id="dashMetricTotal">-</div>
+              </div>
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
+                <span class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase block">New Grievances</span>
+                <div class="text-xl font-bold font-tabular-data text-blue-700 dark:text-blue-300 mt-0.5" id="dashMetricNew">-</div>
+              </div>
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
+                <span class="text-[10px] font-bold text-error uppercase block">High Risk (AI)</span>
+                <div class="text-xl font-bold font-tabular-data text-error mt-0.5" id="dashMetricHighRisk">-</div>
+              </div>
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
+                <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase block">Docs Required</span>
+                <div class="text-xl font-bold font-tabular-data text-amber-700 dark:text-amber-300 mt-0.5" id="dashMetricDocs">-</div>
+              </div>
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
+                <span class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase block">Escalated</span>
+                <div class="text-xl font-bold font-tabular-data text-purple-700 dark:text-purple-300 mt-0.5" id="dashMetricEscalated">-</div>
+              </div>
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
+                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">Resolved</span>
+                <div class="text-xl font-bold font-tabular-data text-emerald-700 dark:text-emerald-300 mt-0.5" id="dashMetricResolved">-</div>
+              </div>
+            </div>
           </div>
 
           <!-- Main Grid Section: Risk Overview & Priority Projects -->
@@ -407,6 +454,22 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
       alert(t('dashboard.scanCompleted', 'National Scan Completed: 29 High/Critical risks identified.'));
     });
   }
+
+  // Live Case Intelligence Metrics Feed (Phase 14)
+  caseService.getMetricsSummary().then(m => {
+    const setM = (id, val) => {
+      const el = container.querySelector(id);
+      if (el) el.textContent = val !== undefined ? val : '0';
+    };
+    setM('#dashMetricTotal', m.total_cases);
+    setM('#dashMetricNew', m.new_cases);
+    setM('#dashMetricHighRisk', m.high_risk);
+    setM('#dashMetricDocs', m.documents_required);
+    setM('#dashMetricEscalated', m.escalated);
+    setM('#dashMetricResolved', m.resolved);
+  }).catch(e => {
+    console.warn('Could not load case metrics:', e);
+  });
 
   attachRowEvents(container, onNavigateToAssessment, onNavigateToAudit);
 }
