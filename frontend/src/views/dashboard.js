@@ -12,6 +12,7 @@ import {
 } from '../utils/risk.js';
 import { createReadAloudButton } from '../utils/tts.js';
 import { attachMicToInput } from '../utils/stt.js';
+import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
 
 export function renderDashboardView(container, onNavigateToAssessment, onNavigateToAudit) {
@@ -58,7 +59,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.totalProjects', 'Total Projects Monitored')}</span>
+                  <div class="flex items-center gap-1">
+                    <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.totalProjects', 'Total Projects Monitored')}</span>
+                    ${renderInfoButton('dash_total_projects')}
+                  </div>
                   <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">${t('dashboard.totalProjectsCount', '142 Projects')}</span>
                 </div>
                 <div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface">
@@ -76,7 +80,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               <div class="absolute top-0 left-0 right-0 h-1 bg-secondary-container"></div>
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.highCriticalRisk', 'High / Critical Risk')}</span>
+                  <div class="flex items-center gap-1">
+                    <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.highCriticalRisk', 'High / Critical Risk')}</span>
+                    ${renderInfoButton('dash_high_critical')}
+                  </div>
                   <div class="flex items-baseline gap-space-xs">
                     <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">${t('dashboard.highCriticalCount', '29 Projects')}</span>
                     <span class="font-label-sm text-label-sm text-secondary font-semibold font-tabular-data">(20.4%)</span>
@@ -96,7 +103,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.requiringIntervention', 'Requiring Intervention')}</span>
+                  <div class="flex items-center gap-1">
+                    <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.requiringIntervention', 'Requiring Intervention')}</span>
+                    ${renderInfoButton('dash_intervention')}
+                  </div>
                   <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">${t('dashboard.interventionCount', '14 Immediate Actions')}</span>
                 </div>
                 <div class="w-10 h-10 rounded-lg bg-secondary-fixed/50 flex items-center justify-center text-on-secondary-fixed">
@@ -113,7 +123,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
               <div class="flex items-start justify-between">
                 <div class="flex flex-col gap-space-xs">
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.avgDelayRisk', 'Average Delay Risk')}</span>
+                  <div class="flex items-center gap-1">
+                    <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">${t('dashboard.avgDelayRisk', 'Average Delay Risk')}</span>
+                    ${renderInfoButton('dash_avg_risk')}
+                  </div>
                   <div class="flex items-baseline gap-space-xs">
                     <span class="font-headline-lg text-headline-lg font-bold text-on-surface font-tabular-data">36.8%</span>
                     <span class="font-label-sm text-label-sm text-on-surface-variant">${t('dashboard.modelConfidence', 'Model CI 95%')}</span>
@@ -141,7 +154,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               <div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
                 <div class="flex items-center justify-between">
                   <div class="flex flex-col">
-                    <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${t('dashboard.riskOverview', 'Risk Overview & Distribution')}</h3>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${t('dashboard.riskOverview', 'Risk Overview & Distribution')}</h3>
+                      ${renderInfoButton('dash_risk_distribution')}
+                    </div>
                     <span class="font-body-sm text-body-sm text-on-surface-variant">${t('dashboard.portfolioBreakdown', 'National Portfolio breakdown (N=142)')}</span>
                   </div>
                   <span class="font-tabular-data font-label-sm text-label-sm px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-semibold">
@@ -219,7 +235,10 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                 <!-- Key Risk Drivers Breakdown -->
                 <div class="pt-space-sm flex flex-col gap-space-sm border-t border-surface-container-high">
                   <div class="flex items-center justify-between">
-                    <span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">${t('dashboard.keyRiskDrivers', 'Key Risk Drivers')}</span>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">${t('dashboard.keyRiskDrivers', 'Key Risk Drivers')}</span>
+                      ${renderInfoButton('dash_key_drivers')}
+                    </div>
                     <span class="font-label-sm text-label-sm text-on-surface-variant">${t('dashboard.rootCauseCluster', 'Root Cause Cluster')}</span>
                   </div>
                   <!-- Driver Progress Bars -->
@@ -271,6 +290,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                   <div class="flex items-center gap-space-xs">
                     <span class="material-symbols-outlined text-[20px]">psychology</span>
                     <span class="font-label-md text-label-md font-bold uppercase tracking-wider">${t('dashboard.predictiveTriangulationAlert', 'Predictive Triangulation Alert')}</span>
+                    ${renderInfoButton('dash_triangulation_alert')}
                   </div>
                   <div id="alertReadAloudSlot"></div>
                 </div>
@@ -292,9 +312,12 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               <div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
                   <div class="flex flex-col">
-                    <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">
-                      ${t('dashboard.priorityProjects', 'Priority Projects Requiring Administrative Oversight')}
-                    </h3>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">
+                        ${t('dashboard.priorityProjects', 'Priority Projects Requiring Administrative Oversight')}
+                      </h3>
+                      ${renderInfoButton('dash_priority_projects')}
+                    </div>
                     <span class="font-body-sm text-body-sm text-on-surface-variant">
                       ${t('dashboard.cadastralEscalation', 'Cadastral escalation ledger sorted by delay probability')}
                     </span>

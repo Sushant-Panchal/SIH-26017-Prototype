@@ -13,6 +13,7 @@ import {
   getRiskLevelLabel,
 } from '../utils/risk.js';
 import { createReadAloudButton } from '../utils/tts.js';
+import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
 
 export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavigateToAssessment) {
@@ -37,11 +38,13 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
           <span class="inline-flex items-center gap-1.5 text-on-surface-variant">
             <span class="material-symbols-outlined text-[15px] text-secondary">verified_user</span>
             ${t('detail.statutoryHash', 'Statutory Hash')}: <span class="font-tabular-data text-on-surface font-semibold">SHA256-7D88-${project.district.substring(0, 3).toUpperCase()}</span>
+            ${renderInfoButton('detail_statutory_hash')}
           </span>
           <span class="text-outline-variant">•</span>
           <span class="inline-flex items-center gap-1 text-on-surface-variant">
             <span class="material-symbols-outlined text-[15px]">update</span>
             ${t('detail.modelInference', 'Model Inference')}: <span class="font-tabular-data text-on-surface">${t('detail.liveSynchronized', 'Live Synchronized')}</span>
+            ${renderInfoButton('detail_model_inference')}
           </span>
         </div>
       </div>
@@ -94,10 +97,13 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
               <span class="material-symbols-outlined text-[18px]">bolt</span>
               <span>${t('detail.rerunAssessment', 'Re-run Assessment')}</span>
             </button>
-            <button class="px-space-md py-2 bg-primary hover:bg-surface-container-high text-on-primary hover:text-on-surface font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm" id="draftDcOrderBtn" type="button">
-              <span class="material-symbols-outlined text-[18px]">history_edu</span>
-              <span>${t('detail.draftDcOrder', 'Draft DC Order')}</span>
-            </button>
+            <div class="flex items-center gap-1">
+              <button class="px-space-md py-2 bg-primary hover:bg-surface-container-high text-on-primary hover:text-on-surface font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm" id="draftDcOrderBtn" type="button">
+                <span class="material-symbols-outlined text-[18px]">history_edu</span>
+                <span>${t('detail.draftDcOrder', 'Draft DC Order')}</span>
+              </button>
+              ${renderInfoButton('detail_draft_dc_order')}
+            </div>
           </div>
         </div>
 
@@ -112,14 +118,20 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
           } p-space-xl flex flex-col justify-between relative overflow-hidden">
             <div class="flex flex-col gap-space-md relative z-10">
               <div class="flex items-center justify-between">
-                <span class="px-space-xs py-1 rounded ${getRiskBadgeClasses(riskLevel)} font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm border">
-                  <span class="w-2 h-2 rounded-full bg-current animate-ping"></span>
-                  ${riskLabel} ${t('detail.riskTier', 'Risk Tier')}
-                </span>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-space-xs py-1 rounded ${getRiskBadgeClasses(riskLevel)} font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm border">
+                    <span class="w-2 h-2 rounded-full bg-current animate-ping"></span>
+                    ${riskLabel} ${t('detail.riskTier', 'Risk Tier')}
+                  </span>
+                  ${renderInfoButton('risk_level')}
+                </div>
                 <span class="font-tabular-data text-label-sm font-semibold">${t('detail.engineXgb', 'XGB-26017 Engine')}</span>
               </div>
               <div class="flex flex-col pt-space-xs">
-                <span class="font-label-md text-label-md uppercase tracking-wide text-on-surface-variant font-semibold">${t('detail.modelDelayProb', 'Model Delay Probability')}</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-label-md text-label-md uppercase tracking-wide text-on-surface-variant font-semibold">${t('detail.modelDelayProb', 'Model Delay Probability')}</span>
+                  ${renderInfoButton('delay_probability')}
+                </div>
                 <div class="flex items-baseline gap-space-xs">
                   <span class="font-headline-xl text-headline-xl font-tabular-data ${getRiskTextColor(riskLevel)} font-extrabold tracking-tight">${project.delayProbability}%</span>
                   <span class="font-headline-sm text-headline-sm font-bold text-on-surface">${t('detail.probability', 'PROBABILITY')}</span>
@@ -136,6 +148,7 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
                 ${t('detail.modelConfidence', 'Model Confidence')}: <strong class="font-tabular-data font-semibold">91.4%</strong>
+                ${renderInfoButton('model_confidence')}
               </span>
               <span class="font-tabular-data text-label-sm">${t('detail.trainedRecords', 'N = 3,000,000 Trained')}</span>
             </div>
@@ -146,7 +159,10 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
             <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
               <div class="p-space-md bg-surface-container-low rounded-lg flex flex-col gap-1 border border-outline-variant/30">
                 <div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
-                  <span>${t('detail.totalRequisition', 'Total Land Requisition')}</span>
+                  <div class="flex items-center gap-1">
+                    <span>${t('detail.totalRequisition', 'Total Land Requisition')}</span>
+                    ${renderInfoButton('detail_land_requisition')}
+                  </div>
                   <span class="material-symbols-outlined text-[16px]">map</span>
                 </div>
                 <span class="font-headline-sm text-headline-sm text-on-surface font-tabular-data font-bold">184.20 Ha</span>
@@ -154,7 +170,10 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
               </div>
               <div class="p-space-md bg-surface-container-low rounded-lg flex flex-col gap-1 border border-outline-variant/30">
                 <div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
-                  <span>${t('detail.affectedLandowners', 'Affected Landowners')}</span>
+                  <div class="flex items-center gap-1">
+                    <span>${t('detail.affectedLandowners', 'Affected Landowners')}</span>
+                    ${renderInfoButton('detail_affected_landowners')}
+                  </div>
                   <span class="material-symbols-outlined text-[16px]">groups</span>
                 </div>
                 <span class="font-headline-sm text-headline-sm text-on-surface font-tabular-data font-bold">1,892 ${t('detail.khatas', 'Khatas')}</span>
@@ -162,7 +181,10 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
               </div>
               <div class="p-space-md bg-surface-container-low rounded-lg flex flex-col gap-1 border border-outline-variant/30">
                 <div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
-                  <span>${t('detail.sanctionedEscrow', 'Sanctioned Escrow')}</span>
+                  <div class="flex items-center gap-1">
+                    <span>${t('detail.sanctionedEscrow', 'Sanctioned Escrow')}</span>
+                    ${renderInfoButton('detail_sanctioned_escrow')}
+                  </div>
                   <span class="material-symbols-outlined text-[16px]">payments</span>
                 </div>
                 <span class="font-headline-sm text-headline-sm text-on-surface font-tabular-data font-bold">₹62.00 Cr</span>
@@ -176,6 +198,7 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
                 <span class="font-bold flex items-center gap-1 text-secondary">
                   <span class="material-symbols-outlined text-[16px]">warning</span>
                   ${t('detail.statutoryCutoffLabel', 'Section 19 Statutory Cutoff Timeline:')}
+                  ${renderInfoButton('detail_cutoff_timeline')}
                 </span>
                 <span class="font-tabular-data font-bold text-error">${t('detail.slippageRisk', '+94 Days Slippage Risk')}</span>
               </div>
@@ -192,7 +215,10 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
         <div class="w-full bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md border border-outline-variant/30">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs">
             <div>
-              <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">${t('detail.progressGaugesTitle', 'Multi-Domain Acquisition Progress Gauges')}</h2>
+              <div class="flex items-center gap-1.5">
+                <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">${t('detail.progressGaugesTitle', 'Multi-Domain Acquisition Progress Gauges')}</h2>
+                ${renderInfoButton('detail_progress_gauges')}
+              </div>
               <p class="font-body-sm text-body-sm text-on-surface-variant">${t('detail.progressGaugesSubtitle', 'Cadastral metrics synchronized with state e-Bhoomi records registry')}</p>
             </div>
             <span class="font-label-sm text-label-sm text-on-surface-variant font-tabular-data px-space-xs py-1 rounded bg-surface-container font-semibold">
@@ -351,9 +377,12 @@ ${t('detail.modalDisclaimer', 'This document is a prototype draft generated auto
             </span>
             <span class="text-xs text-on-surface-variant font-medium">${t('detail.modalSimulationMode', 'Simulation Mode • Not Legally Enforceable')}</span>
           </div>
-          <h3 id="draftOrderModalTitle" class="font-headline-sm text-headline-sm font-bold text-on-surface">
-            ${t('detail.modalTitle', 'Draft DC Order / Administrative Directive')}
-          </h3>
+          <div class="flex items-center gap-1.5">
+            <h3 id="draftOrderModalTitle" class="font-headline-sm text-headline-sm font-bold text-on-surface">
+              ${t('detail.modalTitle', 'Draft DC Order / Administrative Directive')}
+            </h3>
+            ${renderInfoButton('detail_draft_dc_order')}
+          </div>
           <p class="font-body-sm text-body-sm text-on-surface-variant">
             ${t('detail.modalSubtitle', 'Pre-populated prototype administrative memo based on real-time project risk telemetry.')}
           </p>

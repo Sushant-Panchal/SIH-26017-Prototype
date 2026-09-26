@@ -11,6 +11,7 @@ import { renderNotificationsView } from './views/notifications.js';
 import { predictionService } from './api/prediction.js';
 import { notificationStore } from './utils/notifications.js';
 import { themeManager } from './utils/theme.js';
+import { initInfoSystem } from './utils/infoModal.js';
 import { i18n, t } from './i18n/index.js';
 
 class BhoomiSakhaApp {
@@ -23,6 +24,7 @@ class BhoomiSakhaApp {
   }
 
   init() {
+    initInfoSystem();
     themeManager.init();
     this.setupThemeToggle();
     this.setupLanguageToggle();

@@ -5,6 +5,7 @@
 
 import { notificationStore } from '../utils/notifications.js';
 import { tts } from '../utils/tts.js';
+import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
 
 export function renderNotificationsView(container, onStateChange) {
@@ -57,14 +58,30 @@ export function renderNotificationsView(container, onStateChange) {
           </div>
         </div>
 
-        <!-- Filter Controls -->
-        <div class="flex items-center gap-2">
-          <button class="px-3 py-1 rounded font-label-sm text-xs font-semibold transition-all ${activeFilter === 'all' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'}" id="filterAllBtn" type="button">
-            ${t('notifications.filterAll', 'All')} (${allNotifs.length})
-          </button>
-          <button class="px-3 py-1 rounded font-label-sm text-xs font-semibold transition-all ${activeFilter === 'unread' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'}" id="filterUnreadBtn" type="button">
-            ${t('notifications.filterUnread', 'Unread')} (${unreadCount})
-          </button>
+        <!-- Filter Controls & Context Guidance -->
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-1 rounded font-label-sm text-xs font-semibold transition-all ${activeFilter === 'all' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'}" id="filterAllBtn" type="button">
+              ${t('notifications.filterAll', 'All')} (${allNotifs.length})
+            </button>
+            <button class="px-3 py-1 rounded font-label-sm text-xs font-semibold transition-all ${activeFilter === 'unread' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'}" id="filterUnreadBtn" type="button">
+              ${t('notifications.filterUnread', 'Unread')} (${unreadCount})
+            </button>
+          </div>
+          <div class="flex items-center gap-space-sm font-label-sm text-xs text-on-surface-variant">
+            <div class="flex items-center gap-1">
+              <span>${t('notifications.severity', 'Severity')}</span>
+              ${renderInfoButton('notif_severity')}
+            </div>
+            <div class="flex items-center gap-1">
+              <span>${t('notifications.categories', 'Categories')}</span>
+              ${renderInfoButton('notif_categories')}
+            </div>
+            <div class="flex items-center gap-1">
+              <span>${t('notifications.readState', 'Read State')}</span>
+              ${renderInfoButton('notif_unread_state')}
+            </div>
+          </div>
         </div>
 
         <!-- Notification List -->

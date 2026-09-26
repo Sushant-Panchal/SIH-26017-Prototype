@@ -1,6 +1,7 @@
 /**
  * Bhoomi Sakha - Assessment View
  * Interactive Risk Assessment Cockpit with 10 structured sections,
+ * accessible custom comboboxes with per-option hover/focus guidance,
  * live telemetry editing, real-time XGBoost inference via POST /predict,
  * dynamic SHAP risk-increasing factor breakdowns, and risk-mitigation vectors.
  */
@@ -18,6 +19,8 @@ import {
   getRiskLevelLabel,
 } from '../utils/risk.js';
 import { createReadAloudButton } from '../utils/tts.js';
+import { renderInfoButton } from '../utils/infoModal.js';
+import { createCustomSelect } from '../components/customSelect.js';
 import { i18n, t } from '../i18n/index.js';
 
 let currentAssessmentState = {
@@ -37,7 +40,7 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
         <!-- Title and Metadata Strip -->
         <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
           <div class="flex flex-col">
-            <div class="flex items-center gap-space-sm">
+            <div class="flex items-center gap-space-sm flex-wrap">
               <span class="w-2.5 h-6 bg-secondary-container rounded-sm"></span>
               <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">${t('assessment.title', 'Assess Project Risk')}</h1>
               <span class="px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">${t('assessment.engineBadge', 'FastAPI • XGB-26017 Engine')}</span>
@@ -48,14 +51,16 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
           </div>
 
           <!-- Mode Selector Switch -->
-          <div class="inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner shrink-0">
+          <div class="inline-flex p-1 rounded-xl bg-surface-container-high shadow-inner shrink-0 items-center gap-1">
             <button class="px-space-md py-1.5 rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5" id="modeSelectBtn" type="button">
               <span class="material-symbols-outlined text-[16px]">folder_open</span>
               <span>${t('assessment.selectProject', 'Select Existing Project')}</span>
+              ${renderInfoButton('mode_select_project')}
             </button>
             <button class="px-space-md py-1.5 rounded font-label-md text-label-md bg-surface-container-lowest text-on-surface shadow-sm font-semibold flex items-center gap-1.5 transition-all" id="modeSimulateBtn" type="button">
               <span class="material-symbols-outlined text-[16px] text-secondary">tune</span>
               <span>${t('assessment.testScenario', 'Create / Test Scenario')}</span>
+              ${renderInfoButton('mode_test_scenario')}
             </button>
           </div>
         </div>
@@ -65,6 +70,7 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
           <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm pl-space-xs">
             <span class="material-symbols-outlined text-[16px] text-secondary">flash_on</span>
             <span class="uppercase tracking-wider font-semibold">${t('assessment.statutoryPresets', 'Statutory Test Presets:')}</span>
+            ${renderInfoButton('statutory_presets')}
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-space-xs w-full lg:w-auto">
             <button class="preset-pill px-space-sm py-1.5 rounded bg-surface-container-low hover:bg-surface-container transition-colors text-left flex items-center justify-between gap-space-sm group" data-preset="low" type="button">
@@ -116,10 +122,13 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
                 <p class="font-body-sm text-body-sm text-on-surface-variant">${t('assessment.telemetrySubtitle', 'Configure cadastral attributes according to Section 11 & 19 statutory filings')}</p>
               </div>
             </div>
-            <button class="text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm flex items-center gap-1 px-space-sm py-1 rounded hover:bg-surface-container transition-colors border border-outline-variant/40" id="resetFormBtn" type="button">
-              <span class="material-symbols-outlined text-[15px]">refresh</span>
-              <span>${t('assessment.resetValues', 'Reset Values')}</span>
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button class="text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm flex items-center gap-1 px-space-sm py-1 rounded hover:bg-surface-container transition-colors border border-outline-variant/40" id="resetFormBtn" type="button">
+                <span class="material-symbols-outlined text-[15px]">refresh</span>
+                <span>${t('assessment.resetValues', 'Reset Values')}</span>
+              </button>
+              ${renderInfoButton('reset_values')}
+            </div>
           </div>
 
           <!-- SECTION A: Project Profile -->
@@ -132,54 +141,60 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm">
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelProjectType', 'Project Type')}</label>
-                <select class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-label-md text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_projectType">
-                  <option value="Highway">${t('dropdown.project_type.highway', 'Highway')}</option>
-                  <option value="Railway">${t('dropdown.project_type.railway', 'Railway')}</option>
-                  <option value="Industrial">${t('dropdown.project_type.industrial', 'Industrial Node')}</option>
-                  <option value="Metro">${t('dropdown.project_type.metro', 'Metro Rail')}</option>
-                  <option value="Irrigation">${t('dropdown.project_type.irrigation', 'Irrigation')}</option>
-                  <option value="Power">${t('dropdown.project_type.power', 'Power Grid')}</option>
-                  <option value="Urban Development">${t('dropdown.project_type.urban', 'Urban Development')}</option>
-                </select>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelProjectType', 'Project Type')}</label>
+                  ${renderInfoButton('project_type')}
+                </div>
+                <div id="mount_projectType"></div>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelLandType', 'Land Classification')}</label>
-                <select class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-label-md text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_landType">
-                  <option value="Agricultural">${t('dropdown.land_type.agricultural', 'Agricultural')}</option>
-                  <option value="Commercial">${t('dropdown.land_type.commercial', 'Commercial')}</option>
-                  <option value="Industrial">${t('dropdown.land_type.industrial', 'Industrial')}</option>
-                  <option value="Mixed">${t('dropdown.land_type.mixed', 'Mixed Revenue')}</option>
-                  <option value="Residential">${t('dropdown.land_type.residential', 'Residential')}</option>
-                </select>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelLandType', 'Land Classification')}</label>
+                  ${renderInfoButton('land_type')}
+                </div>
+                <div id="mount_landType"></div>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelPriority', 'Priority Tier')}</label>
-                <select class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-label-md text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_priority">
-                  <option value="Normal">${t('dropdown.priority.normal', 'Normal')}</option>
-                  <option value="High">${t('dropdown.priority.high', 'High')}</option>
-                  <option value="Critical">${t('dropdown.priority.critical', 'Critical')}</option>
-                </select>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelPriority', 'Priority Tier')}</label>
+                  ${renderInfoButton('priority')}
+                </div>
+                <div id="mount_priority"></div>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelComplexity', 'Complexity (0-100)')}</label>
-                <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_complexity" step="0.1" min="0" max="100" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelComplexity', 'Complexity (0-100)')}</label>
+                  ${renderInfoButton('complexity_score')}
+                </div>
+                <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_complexity" step="0.1" min="0" max="100" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelTotalParcels', 'Total Parcels')}</label>
-                <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_totalParcels" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelTotalParcels', 'Total Parcels')}</label>
+                  ${renderInfoButton('total_parcels')}
+                </div>
+                <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_totalParcels" min="0" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelAffectedFamilies', 'Affected Families (PAFs)')}</label>
-                <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_affectedFamilies" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelAffectedFamilies', 'Affected Families (PAFs)')}</label>
+                  ${renderInfoButton('affected_families')}
+                </div>
+                <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_affectedFamilies" min="0" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelLandArea', 'Land Extent (Ha)')}</label>
-                <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_landArea" step="0.1" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelLandArea', 'Land Extent (Ha)')}</label>
+                  ${renderInfoButton('land_area_hectares')}
+                </div>
+                <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_landArea" step="0.1" min="0" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelPlannedDuration', 'Planned Duration (d)')}</label>
-                <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_plannedDuration" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelPlannedDuration', 'Planned Duration (d)')}</label>
+                  ${renderInfoButton('planned_duration_days')}
+                </div>
+                <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none focus:ring-1 focus:ring-on-surface border border-outline-variant/40" id="field_plannedDuration" min="0" type="number"/>
               </div>
             </div>
           </div>
@@ -197,20 +212,39 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-2 gap-space-sm">
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelAcqProgress', 'Acq. Progress (%)')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_acqProgress" min="0" max="100" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelAcqProgress', 'Acq. Progress (%)')}</label>
+                    ${renderInfoButton('acquisition_progress_pct')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_acqProgress" min="0" max="100" step="0.1" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelVelocity', 'Velocity (%/30d)')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_velocity" step="0.01" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelVelocity', 'Velocity (%/30d)')}</label>
+                    ${renderInfoButton('acquisition_velocity_pct_per_30d')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_velocity" step="0.01" min="0" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelParcelsPending', 'Parcels Pending')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_parcelsPending" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelParcelsPending', 'Parcels Pending')}</label>
+                    ${renderInfoButton('parcels_pending')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_parcelsPending" min="0" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelPossessionPending', 'Possession Pending')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_possessionPending" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelPossessionPending', 'Possession Pending')}</label>
+                    ${renderInfoButton('possession_pending_parcels')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_possessionPending" min="0" type="number"/>
+                </div>
+                <div class="col-span-2 flex flex-col pt-1">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelCurrentStage', 'Current Statutory Stage')}</label>
+                    ${renderInfoButton('current_stage')}
+                  </div>
+                  <div id="mount_currentStage"></div>
                 </div>
               </div>
             </div>
@@ -226,19 +260,28 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-2 gap-space-sm">
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelDocsReq', 'Docs Required')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_docsReq" min="1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelDocsReq', 'Docs Required')}</label>
+                    ${renderInfoButton('documents_required')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_docsReq" min="1" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-secondary font-semibold mb-1 flex items-center gap-1">
-                    <span>${t('assessment.labelDocsPending', 'Docs Pending')}</span>
-                    <span class="material-symbols-outlined text-[13px]">edit</span>
-                  </label>
-                  <input class="bg-surface-container-high px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface font-bold focus:outline-none focus:ring-2 focus:ring-secondary-container border border-outline-variant/50" id="field_docsPending" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-secondary font-semibold flex items-center gap-1">
+                      <span>${t('assessment.labelDocsPending', 'Docs Pending')}</span>
+                      <span class="material-symbols-outlined text-[13px]">edit</span>
+                    </label>
+                    ${renderInfoButton('documents_pending')}
+                  </div>
+                  <input class="bg-surface-container-high px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface font-bold focus:outline-none focus:ring-2 focus:ring-secondary-container border border-outline-variant/50" id="field_docsPending" min="0" type="number"/>
                 </div>
-                <div class="col-span-2 flex flex-col gap-1">
+                <div class="col-span-2 flex flex-col gap-1 pt-1">
                   <div class="flex items-center justify-between font-label-sm text-label-sm">
-                    <span class="text-on-surface-variant">${t('assessment.labelDocCompletion', 'Documentation Completion')}</span>
+                    <div class="flex items-center gap-1">
+                      <span class="text-on-surface-variant">${t('assessment.labelDocCompletion', 'Documentation Completion')}</span>
+                      ${renderInfoButton('documentation_completion_pct')}
+                    </div>
                     <span class="font-tabular-data font-semibold text-on-surface" id="label_docCompletion">--%</span>
                   </div>
                   <div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden">
@@ -262,16 +305,25 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-3 gap-space-xs">
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelCompCases', 'Pending Cases')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_compCases" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelCompCases', 'Cases')}</label>
+                    ${renderInfoButton('compensation_pending_cases')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_compCases" min="0" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelCompAmount', 'Pending (₹ Cr)')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_compAmount" min="0" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelCompAmount', '₹ Cr')}</label>
+                    ${renderInfoButton('compensation_pending_amount')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_compAmount" min="0" step="0.1" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelCompDisbursed', 'Disbursed %')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_compDisbursed" min="0" max="100" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelCompDisbursed', 'Disb %')}</label>
+                    ${renderInfoButton('compensation_completion_pct')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_compDisbursed" min="0" max="100" step="0.1" type="number"/>
                 </div>
               </div>
             </div>
@@ -286,16 +338,25 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-3 gap-space-xs">
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelApprPending', 'Approvals Pend.')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_apprPending" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelApprPending', 'Pending')}</label>
+                    ${renderInfoButton('approvals_pending')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_apprPending" min="0" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelApprOverdue', 'Overdue Num')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_apprOverdue" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelApprOverdue', 'Overdue')}</label>
+                    ${renderInfoButton('overdue_approvals')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_apprOverdue" min="0" type="number"/>
                 </div>
                 <div class="flex flex-col">
-                  <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelApprDelay', 'Avg Delay (d)')}</label>
-                  <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_apprDelay" min="0" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelApprDelay', 'Delay (d)')}</label>
+                    ${renderInfoButton('avg_approval_delay_days')}
+                  </div>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_apprDelay" min="0" step="0.1" type="number"/>
                 </div>
               </div>
             </div>
@@ -311,20 +372,32 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm">
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelPendingObj', 'Pending Objections')}</label>
-                <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_pendingObj" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelPendingObj', 'Pending Objections')}</label>
+                  ${renderInfoButton('pending_objections')}
+                </div>
+                <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_pendingObj" min="0" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelActiveDisputes', 'Active Land Disputes')}</label>
-                <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_activeDisputes" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelActiveDisputes', 'Active Disputes')}</label>
+                  ${renderInfoButton('active_legal_disputes')}
+                </div>
+                <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_activeDisputes" min="0" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-on-surface-variant mb-1 font-medium">${t('assessment.labelOwnerDisputes', 'Ownership Conflicts')}</label>
-                <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_ownerDisputes" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelOwnerDisputes', 'Ownership Conflicts')}</label>
+                  ${renderInfoButton('ownership_disputes')}
+                </div>
+                <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_ownerDisputes" min="0" type="number"/>
               </div>
               <div class="flex flex-col">
-                <label class="font-label-sm text-label-sm text-error font-bold mb-1">${t('assessment.labelCourtStays', 'Court Stays / Writs')}</label>
-                <input class="bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface font-bold focus:outline-none border border-error/50" id="field_courtStays" min="0" type="number"/>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-label-sm text-label-sm text-error font-bold">${t('assessment.labelCourtStays', 'Court Stays')}</label>
+                  ${renderInfoButton('court_stay_cases')}
+                </div>
+                <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface font-bold focus:outline-none border border-error/50" id="field_courtStays" min="0" type="number"/>
               </div>
             </div>
           </div>
@@ -340,12 +413,18 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-2 gap-space-sm pt-1">
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelRrPending', 'Pending Cases')}</label>
-                  <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_rrPending" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelRrPending', 'Pending Cases')}</label>
+                    ${renderInfoButton('rr_pending_cases')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_rrPending" min="0" type="number"/>
                 </div>
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelRrCompletion', 'Completion %')}</label>
-                  <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_rrCompletion" min="0" max="100" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelRrCompletion', 'Completion %')}</label>
+                    ${renderInfoButton('rr_completion_pct')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_rrCompletion" min="0" max="100" step="0.1" type="number"/>
                 </div>
               </div>
             </div>
@@ -358,12 +437,18 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-2 gap-space-sm pt-1">
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelSchedVariance', 'Variance (Days)')}</label>
-                  <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_schedVariance" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelSchedVariance', 'Variance (d)')}</label>
+                    ${renderInfoButton('schedule_variance_days')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_schedVariance" step="0.1" type="number"/>
                 </div>
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelMilestonesOverdue', 'Overdue Milestones')}</label>
-                  <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_milestonesOverdue" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelMilestonesOverdue', 'Overdue')}</label>
+                    ${renderInfoButton('milestones_overdue')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_milestonesOverdue" min="0" type="number"/>
                 </div>
               </div>
             </div>
@@ -376,16 +461,25 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-3 gap-space-xs pt-1">
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelShActions', 'Pending Act.')}</label>
-                  <input class="w-full bg-surface-container-low px-1.5 py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_shActions" min="0" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelShActions', 'Actions')}</label>
+                    ${renderInfoButton('pending_stakeholder_actions')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-1.5 py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_shActions" min="0" type="number"/>
                 </div>
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelShResponse', 'Avg Resp (d)')}</label>
-                  <input class="w-full bg-surface-container-low px-1.5 py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_shResponse" min="0" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelShResponse', 'Resp (d)')}</label>
+                    ${renderInfoButton('avg_stakeholder_response_days')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-1.5 py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_shResponse" min="0" step="0.1" type="number"/>
                 </div>
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelShScore', 'Score /10')}</label>
-                  <input class="w-full bg-surface-container-low px-1.5 py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_shScore" min="0" max="10" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">${t('assessment.labelShScore', 'Score/10')}</label>
+                    ${renderInfoButton('stakeholder_responsiveness_score')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-1.5 py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_shScore" min="0" max="10" step="0.1" type="number"/>
                 </div>
               </div>
             </div>
@@ -398,8 +492,11 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               </div>
               <div class="grid grid-cols-2 gap-space-sm pt-1">
                 <div>
-                  <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelHistDelay', 'Avg Reg. Delay (d)')}</label>
-                  <input class="w-full bg-surface-container-low px-space-sm py-1 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_histDelay" min="0" step="0.1" type="number"/>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelHistDelay', 'Avg Reg. Delay (d)')}</label>
+                    ${renderInfoButton('historical_avg_delay_days')}
+                  </div>
+                  <input class="w-full bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface border border-outline-variant/40" id="field_histDelay" min="0" step="0.1" type="number"/>
                 </div>
                 <div class="flex flex-col justify-end">
                   <span class="font-label-sm text-[11px] text-on-surface-variant">${t('assessment.trainingArchetype', 'Training Archetype:')}</span>
@@ -421,10 +518,13 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               <button class="w-1/3 sm:w-auto px-space-md py-2.5 rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors border border-outline-variant/40" id="resetScenarioBtn" type="button">
                 ${t('assessment.resetBtn', 'Reset')}
               </button>
-              <button class="w-2/3 sm:w-auto px-space-lg py-2.5 rounded bg-primary text-on-primary hover:bg-surface-container-highest hover:text-on-surface transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 group font-bold tracking-wide uppercase" id="runPredictionBtn" type="button">
-                <span class="material-symbols-outlined text-[20px] text-secondary-container group-hover:rotate-12 transition-transform">model_training</span>
-                <span>${t('assessment.assessRiskBtn', 'Assess Project Risk')}</span>
-              </button>
+              <div class="flex items-center gap-1.5 w-2/3 sm:w-auto">
+                <button class="w-full sm:w-auto px-space-lg py-2.5 rounded bg-primary text-on-primary hover:bg-surface-container-highest hover:text-on-surface transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 group font-bold tracking-wide uppercase" id="runPredictionBtn" type="button">
+                  <span class="material-symbols-outlined text-[20px] text-secondary-container group-hover:rotate-12 transition-transform">model_training</span>
+                  <span>${t('assessment.assessRiskBtn', 'Assess Project Risk')}</span>
+                </button>
+                ${renderInfoButton('assess_project_risk')}
+              </div>
             </div>
           </div>
         </div>
@@ -448,54 +548,58 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-space-xs">
                 <span class="material-symbols-outlined text-secondary text-[22px]">analytics</span>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${t('assessment.riskIndex', 'Predictive Risk Index')}</h3>
+                <span class="font-headline-sm text-base font-bold text-on-surface">${t('assessment.riskForecast', 'Risk Forecast')}</span>
+                ${renderInfoButton('delay_probability')}
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-space-xs">
+                <span class="px-space-sm py-1 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-bold uppercase tracking-wider" id="riskBadge">--</span>
+                ${renderInfoButton('risk_level')}
                 <div id="assessmentReadAloudSlot"></div>
-                <span class="px-space-sm py-1 rounded font-label-sm text-label-sm font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 transition-all" id="riskBadge">
-                  ${getRiskLevelLabel('MEDIUM')}
-                </span>
               </div>
             </div>
 
-            <!-- Delay Probability Radial Visualization -->
-            <div class="flex flex-col items-center justify-center py-space-sm">
-              <div class="relative flex items-center justify-center w-52 h-52">
+            <!-- Main Probability Radial Dial & Metric -->
+            <div class="flex flex-col sm:flex-row items-center gap-space-lg py-space-xs">
+              <div class="relative w-32 h-32 flex items-center justify-center shrink-0">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                  <circle class="text-surface-container-high" cx="60" cy="60" fill="none" r="48" stroke="currentColor" stroke-width="10"></circle>
-                  <circle class="text-secondary transition-all duration-700 ease-out" cx="60" cy="60" fill="none" id="probabilityCircle" r="48" stroke="currentColor" stroke-dasharray="301.59" stroke-dashoffset="174" stroke-linecap="round" stroke-width="10"></circle>
+                  <circle cx="60" cy="60" r="48" stroke-width="10" stroke="currentColor" fill="none" class="text-surface-container-high"/>
+                  <circle id="probabilityCircle" cx="60" cy="60" r="48" stroke-width="10" stroke="currentColor" fill="none" stroke-dasharray="301.59" stroke-dashoffset="301.59" stroke-linecap="round" class="text-secondary transition-all duration-700 ease-out"/>
                 </svg>
-                <div class="absolute flex flex-col items-center justify-center text-center px-2">
-                  <span class="font-headline-xl text-headline-xl font-bold text-on-surface font-tabular-data leading-none" id="probabilityValue">42.28%</span>
-                  <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">${t('assessment.predictedDelayProb', 'Predicted Delay Probability')}</span>
-                  <span class="mt-1 font-label-sm text-[11px] font-semibold text-amber-600" id="decisionOutcome">${getRiskWording('MEDIUM')}</span>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="font-headline-lg text-2xl font-black font-tabular-data tracking-tight text-on-surface" id="probabilityValue">--%</span>
+                  <span class="font-label-sm text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">${t('assessment.delayProb', 'Delay Prob')}</span>
                 </div>
               </div>
 
-              <!-- Contextual Snapshot Summary & Statutory Threshold -->
-              <div class="w-full mt-3 p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1 border border-outline-variant/30 text-center">
-                <p class="font-body-sm text-xs text-on-surface font-medium" id="riskSummaryText">
-                  ${getRiskSummary('MEDIUM')}
-                </p>
-                <div class="flex items-center justify-center gap-2 font-label-sm text-[11px] text-on-surface-variant pt-1 border-t border-surface-container-high/60">
-                  <span id="riskThresholdNote" class="font-semibold">${getRiskThresholdLabel('MEDIUM')}</span>
+              <div class="flex flex-col gap-1 text-center sm:text-left flex-1">
+                <div class="flex items-center gap-1.5 justify-center sm:justify-start">
+                  <span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">${t('assessment.predictedOutcome', 'Predicted Outcome')}</span>
+                  ${renderInfoButton('model_confidence')}
+                </div>
+                <span class="font-headline-sm text-lg font-bold text-on-surface leading-tight" id="riskSummaryText">
+                  ${t('assessment.awaitingInput', 'Awaiting Telemetry Input...')}
+                </span>
+                <span class="font-label-sm text-xs font-semibold text-secondary" id="decisionOutcome">--</span>
+                <div class="flex items-center gap-1 mt-1 justify-center sm:justify-start">
+                  <span class="font-body-sm text-[11px] text-on-surface-variant" id="riskThresholdNote">
+                    ${t('assessment.statutoryNotice', 'Notice: Inference updates in real time based on active inputs.')}
+                  </span>
+                  ${renderInfoButton('risk_thresholds')}
                 </div>
               </div>
             </div>
 
-            <!-- Explanatory Cadastral Model Note -->
-            <div class="bg-surface-container-low p-space-sm rounded-lg flex items-start gap-space-xs text-on-surface-variant font-body-sm text-body-sm">
-              <span class="material-symbols-outlined text-[16px] text-secondary mt-0.5 shrink-0">verified</span>
-              <span>${t('assessment.modelNote', 'Predicted by XGBoost Model (SIH 26017) trained on 3,000,000 national records. Live model inference via POST /predict.')}</span>
-            </div>
           </div>
 
-          <!-- 2. Risk-Increasing Factors (Red / Orange Bars) -->
+          <!-- 2. Risk-Increasing Factors (Red / Amber Drivers) -->
           <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm border border-outline-variant/30">
             <div class="flex items-center justify-between pb-space-xs border-b border-surface-container-high">
-              <span class="font-label-md text-label-md text-error flex items-center gap-1.5 uppercase tracking-wider font-bold">
-                <span class="material-symbols-outlined text-[16px]">trending_up</span> ${t('assessment.riskIncreasingFactors', 'Risk-Increasing Factors')}
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-label-md text-label-md text-error flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                  <span class="material-symbols-outlined text-[16px]">trending_up</span> ${t('assessment.riskIncreasingFactors', 'Risk-Increasing Factors')}
+                </span>
+                ${renderInfoButton('risk_drivers_increasing')}
+              </div>
               <span class="font-label-sm text-label-sm text-on-surface-variant font-tabular-data">${t('assessment.modelContributionPos', 'Model Contribution (+Δ)')}</span>
             </div>
             <div class="flex flex-col gap-space-sm pt-space-xs" id="riskIncreasingContainer">
@@ -506,9 +610,12 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
           <!-- 3. Factors Reducing Predicted Risk (Green Negative Bars) -->
           <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm border border-outline-variant/30">
             <div class="flex items-center justify-between pb-space-xs border-b border-surface-container-high">
-              <span class="font-label-md text-label-md text-emerald-700 flex items-center gap-1.5 uppercase tracking-wider font-bold">
-                <span class="material-symbols-outlined text-[16px]">trending_down</span> ${t('assessment.riskReducingFactors', 'Factors Reducing Predicted Risk')}
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-label-md text-label-md text-emerald-700 flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                  <span class="material-symbols-outlined text-[16px]">trending_down</span> ${t('assessment.riskReducingFactors', 'Factors Reducing Predicted Risk')}
+                </span>
+                ${renderInfoButton('risk_drivers_reducing')}
+              </div>
               <span class="font-label-sm text-label-sm text-on-surface-variant font-tabular-data">${t('assessment.modelContributionNeg', 'Model Contribution (-Δ)')}</span>
             </div>
             <div class="flex flex-col gap-space-sm pt-space-xs" id="riskReducingContainer">
@@ -522,9 +629,12 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
           <!-- 4. Statutory Directives / Priority Actions -->
           <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm border border-outline-variant/30">
             <div class="flex items-center justify-between pb-space-xs border-b border-surface-container-high">
-              <span class="font-label-md text-label-md text-on-surface flex items-center gap-1.5 uppercase tracking-wider font-bold">
-                <span class="material-symbols-outlined text-[16px] text-secondary">gavel</span> ${t('assessment.recommendedDirectives', 'Recommended Statutory Directives')}
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-label-md text-label-md text-on-surface flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                  <span class="material-symbols-outlined text-[16px] text-secondary">gavel</span> ${t('assessment.recommendedDirectives', 'Recommended Statutory Directives')}
+                </span>
+                ${renderInfoButton('statutory_directives')}
+              </div>
               <span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">${t('assessment.priorityExecution', 'Priority Execution')}</span>
             </div>
             <div class="flex flex-col gap-space-xs" id="directivesContainer">
@@ -538,6 +648,7 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
               <div class="flex items-center gap-space-xs">
                 <span class="material-symbols-outlined text-[18px] text-on-surface-variant">psychology</span>
                 <span class="font-label-md text-label-md text-on-surface font-semibold">${t('assessment.methodology', 'Methodology & Model Evaluation')}</span>
+                ${renderInfoButton('methodology_evaluation')}
               </div>
               <span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform" id="accordionChevron">expand_more</span>
             </button>
@@ -570,6 +681,77 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
 }
 
 function attachAssessmentEvents(container, initialData) {
+  // 1. Mount Custom Accessible Comboboxes
+  const projectTypeMount = container.querySelector('#mount_projectType');
+  if (projectTypeMount) {
+    projectTypeMount.innerHTML = '';
+    const select = createCustomSelect({
+      id: 'field_projectType',
+      value: initialData.values.project_type || 'Highway',
+      options: [
+        { value: 'Highway', labelKey: 'dropdown.project_type.highway', infoKey: 'opt_project_type_highway' },
+        { value: 'Railway', labelKey: 'dropdown.project_type.railway', infoKey: 'opt_project_type_railway' },
+        { value: 'Industrial', labelKey: 'dropdown.project_type.industrial', infoKey: 'opt_project_type_industrial' },
+        { value: 'Metro', labelKey: 'dropdown.project_type.metro', infoKey: 'opt_project_type_metro' },
+        { value: 'Irrigation', labelKey: 'dropdown.project_type.irrigation', infoKey: 'opt_project_type_irrigation' },
+        { value: 'Power', labelKey: 'dropdown.project_type.power', infoKey: 'opt_project_type_power' },
+        { value: 'Urban Development', labelKey: 'dropdown.project_type.urban_development', infoKey: 'opt_project_type_urban' },
+      ],
+    });
+    projectTypeMount.appendChild(select);
+  }
+
+  const landTypeMount = container.querySelector('#mount_landType');
+  if (landTypeMount) {
+    landTypeMount.innerHTML = '';
+    const select = createCustomSelect({
+      id: 'field_landType',
+      value: initialData.values.land_type || 'Agricultural',
+      options: [
+        { value: 'Agricultural', labelKey: 'dropdown.land_type.agricultural', infoKey: 'opt_land_type_agricultural' },
+        { value: 'Commercial', labelKey: 'dropdown.land_type.commercial', infoKey: 'opt_land_type_commercial' },
+        { value: 'Industrial', labelKey: 'dropdown.land_type.industrial', infoKey: 'opt_land_type_industrial' },
+        { value: 'Mixed', labelKey: 'dropdown.land_type.mixed', infoKey: 'opt_land_type_mixed' },
+        { value: 'Residential', labelKey: 'dropdown.land_type.residential', infoKey: 'opt_land_type_residential' },
+      ],
+    });
+    landTypeMount.appendChild(select);
+  }
+
+  const priorityMount = container.querySelector('#mount_priority');
+  if (priorityMount) {
+    priorityMount.innerHTML = '';
+    const select = createCustomSelect({
+      id: 'field_priority',
+      value: initialData.values.priority || 'Normal',
+      options: [
+        { value: 'Normal', labelKey: 'dropdown.priority.normal', infoKey: 'opt_priority_normal' },
+        { value: 'High', labelKey: 'dropdown.priority.high', infoKey: 'opt_priority_high' },
+        { value: 'Critical', labelKey: 'dropdown.priority.critical', infoKey: 'opt_priority_critical' },
+      ],
+    });
+    priorityMount.appendChild(select);
+  }
+
+  const stageMount = container.querySelector('#mount_currentStage');
+  if (stageMount) {
+    stageMount.innerHTML = '';
+    const select = createCustomSelect({
+      id: 'field_currentStage',
+      value: initialData.values.current_stage || 'Survey',
+      options: [
+        { value: 'Notification', labelKey: 'info.opt_stage_notification.title', infoKey: 'opt_stage_notification' },
+        { value: 'Survey', labelKey: 'info.opt_stage_survey.title', infoKey: 'opt_stage_survey' },
+        { value: 'Valuation', labelKey: 'info.opt_stage_valuation.title', infoKey: 'opt_stage_valuation' },
+        { value: 'Compensation', labelKey: 'info.opt_stage_compensation.title', infoKey: 'opt_stage_compensation' },
+        { value: 'Possession', labelKey: 'info.opt_stage_possession.title', infoKey: 'opt_stage_possession' },
+        { value: 'Rehabilitation', labelKey: 'info.opt_stage_rehabilitation.title', infoKey: 'opt_stage_rehabilitation' },
+      ],
+    });
+    stageMount.appendChild(select);
+  }
+
+  // 2. Populate form fields
   populateForm(initialData.values);
   calculateDocCompletion();
 
@@ -675,12 +857,19 @@ function populateForm(values) {
   if (!values) return;
   const setVal = (id, val) => {
     const el = document.getElementById(id);
-    if (el && val !== undefined) el.value = val;
+    if (!el || val === undefined) return;
+    el.value = val;
+    // Update custom select wrapper if present
+    const customContainer = el.closest('.custom-select-container') || document.querySelector(`[data-select-id="${id}"]`);
+    if (customContainer && typeof customContainer.setValue === 'function') {
+      customContainer.setValue(val);
+    }
   };
 
   setVal('field_projectType', values.project_type || 'Highway');
   setVal('field_landType', values.land_type || 'Agricultural');
   setVal('field_priority', values.priority || 'Normal');
+  setVal('field_currentStage', values.current_stage || 'Survey');
   setVal('field_complexity', values.complexity_score ?? 47.7);
   setVal('field_totalParcels', values.total_parcels ?? 233);
   setVal('field_affectedFamilies', values.affected_families ?? 113);
@@ -749,7 +938,7 @@ function collectFormData() {
     project_type: getStr('field_projectType', 'Highway'),
     land_type: getStr('field_landType', 'Mixed'),
     priority: getStr('field_priority', 'Normal'),
-    current_stage: 'Survey',
+    current_stage: getStr('field_currentStage', 'Survey'),
     complexity_score: getNum('field_complexity', 40),
     total_parcels: totalParcels,
     parcels_pending: parcelsPending,
@@ -1004,10 +1193,13 @@ function showPredictionError(container, message) {
           <span>${t('assessment.inferenceUnavailable', 'Inference Unavailable')}</span>
         </div>
         <span class="font-body-sm text-xs text-on-surface">${safeMessage}</span>
-        <button class="mt-1 self-start px-2.5 py-1 bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-sm text-xs font-semibold rounded border border-outline-variant/40 shadow-sm flex items-center gap-1 transition-colors" id="retryPredictionBtn" type="button">
-          <span class="material-symbols-outlined text-[14px]">refresh</span>
-          <span>${t('assessment.retryAssessment', 'Retry Assessment')}</span>
-        </button>
+        <div class="flex items-center gap-1.5 mt-1">
+          <button class="self-start px-2.5 py-1 bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-sm text-xs font-semibold rounded border border-outline-variant/40 shadow-sm flex items-center gap-1 transition-colors" id="retryPredictionBtn" type="button">
+            <span class="material-symbols-outlined text-[14px]">refresh</span>
+            <span>${t('assessment.retryAssessment', 'Retry Assessment')}</span>
+          </button>
+          ${renderInfoButton('retry_assessment')}
+        </div>
       </div>
     `;
 

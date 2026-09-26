@@ -11,6 +11,7 @@ import {
   getRiskLevelLabel,
 } from '../utils/risk.js';
 import { attachMicToInput } from '../utils/stt.js';
+import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
 
 export function renderProjectsView(container, onNavigateToAssessment, onNavigateToAudit) {
@@ -37,7 +38,10 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
       <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-wrap items-center justify-between gap-space-md border border-outline-variant/30">
         <div class="flex flex-wrap items-center gap-space-sm">
           <div class="flex flex-col">
-            <label class="font-label-sm text-[10px] text-on-surface-variant uppercase font-bold">${t('projects.filterSector', 'Filter By Sector')}</label>
+            <div class="flex items-center gap-1">
+              <label class="font-label-sm text-[10px] text-on-surface-variant uppercase font-bold">${t('projects.filterSector', 'Filter By Sector')}</label>
+              ${renderInfoButton('proj_directory_filter_sector')}
+            </div>
             <select class="bg-surface-container-low px-space-sm py-1.5 rounded font-label-sm text-label-sm text-on-surface border border-outline-variant/40" id="filterSector">
               <option value="all">${t('projects.allSectors', 'All Sectors (Highway, Rail, Power, Metro)')}</option>
               <option value="Highway">${t('dropdown.project_type.highway', 'Highways & Expressways')}</option>
@@ -47,7 +51,10 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
             </select>
           </div>
           <div class="flex flex-col">
-            <label class="font-label-sm text-[10px] text-on-surface-variant uppercase font-bold">${t('projects.filterRisk', 'Risk Tier')}</label>
+            <div class="flex items-center gap-1">
+              <label class="font-label-sm text-[10px] text-on-surface-variant uppercase font-bold">${t('projects.filterRisk', 'Risk Tier')}</label>
+              ${renderInfoButton('proj_directory_filter_risk')}
+            </div>
             <select class="bg-surface-container-low px-space-sm py-1.5 rounded font-label-sm text-label-sm text-on-surface border border-outline-variant/40" id="filterRisk">
               <option value="all">${t('projects.allRisks', 'All Risk Tiers')}</option>
               <option value="CRITICAL">${t('risk.critical', 'Critical')} (≥80%)</option>
@@ -71,14 +78,54 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider border-b border-outline-variant/30">
-                <th class="py-3 px-space-md font-bold">${t('projects.colId', 'Project ID')}</th>
-                <th class="py-3 px-space-md font-bold">${t('projects.colName', 'Name & Corridor')}</th>
-                <th class="py-3 px-space-md font-bold">${t('projects.colDistrict', 'State & District')}</th>
-                <th class="py-3 px-space-md font-bold">${t('projects.colStage', 'Statutory Stage')}</th>
-                <th class="py-3 px-space-md font-bold font-tabular-data">${t('projects.colProgress', 'Acquisition Progress')}</th>
-                <th class="py-3 px-space-md font-bold font-tabular-data">${t('projects.colRisk', 'Predicted Delay Risk')}</th>
-                <th class="py-3 px-space-md font-bold">${t('projects.colTier', 'Status Tier')}</th>
-                <th class="py-3 px-space-md font-bold text-right">${t('projects.colAction', 'Actions')}</th>
+                <th class="py-3 px-space-md font-bold">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colId', 'Project ID')}</span>
+                    ${renderInfoButton('project_id')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colName', 'Name & Corridor')}</span>
+                    ${renderInfoButton('project_name_corridor')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colDistrict', 'State & District')}</span>
+                    ${renderInfoButton('state_district')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colStage', 'Statutory Stage')}</span>
+                    ${renderInfoButton('proj_col_stage')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold font-tabular-data">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colProgress', 'Acquisition Progress')}</span>
+                    ${renderInfoButton('acquisition_progress_pct')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold font-tabular-data">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colRisk', 'Predicted Delay Risk')}</span>
+                    ${renderInfoButton('delay_probability')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold">
+                  <div class="flex items-center gap-1">
+                    <span>${t('projects.colTier', 'Status Tier')}</span>
+                    ${renderInfoButton('status_tier_badge')}
+                  </div>
+                </th>
+                <th class="py-3 px-space-md font-bold text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <span>${t('projects.colAction', 'Actions')}</span>
+                    ${renderInfoButton('proj_action_audit')}
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-surface-container font-body-sm text-body-sm" id="directoryTableBody">
