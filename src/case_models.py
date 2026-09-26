@@ -92,6 +92,14 @@ class UserBase(BaseModel):
     authority: Optional[str] = None
     designation: Optional[str] = None
 
+    @field_validator("name")
+    @classmethod
+    def validate_name_format(cls, v: str) -> str:
+        clean = v.strip() if isinstance(v, str) else ""
+        if not clean:
+            raise ValueError("Full Name is required and cannot be empty or whitespace.")
+        return clean
+
     @field_validator("email")
     @classmethod
     def validate_email_format(cls, v: str) -> str:

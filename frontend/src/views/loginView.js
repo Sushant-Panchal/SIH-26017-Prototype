@@ -7,12 +7,31 @@
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 
+function escapeAttr(val) {
+  if (!val) return '';
+  return String(val)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 export function renderLoginView(container, { mode = 'login', initialRole = 'citizen', onAuthSuccess = null } = {}) {
   let currentRole = initialRole; // 'citizen' | 'officer'
   let currentMode = mode; // 'login' | 'register'
   let isPasswordVisible = false;
   let isLoading = false;
   let errorMessage = '';
+
+  const formValues = {
+    name: '',
+    email: '',
+    password: '',
+    district: 'Pune',
+    phone: '',
+    officerKey: '',
+  };
 
   function render() {
     container.innerHTML = `
@@ -102,6 +121,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
                     id="inputName" 
                     required 
                     placeholder="${t('auth.fullNamePlaceholder', 'e.g. Rameshwar Patil')}" 
+                    value="${escapeAttr(formValues.name)}"
                     class="w-full pl-9 pr-3 py-2.5 bg-surface-container-low border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-xs" />
                 </div>
               </div>
@@ -119,6 +139,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
                   id="inputEmail" 
                   required 
                   placeholder="${currentRole === 'officer' ? t('auth.officerEmailPlaceholder', 'officer.name@gov.in') : t('auth.emailPlaceholder', 'citizen@example.com')}" 
+                  value="${escapeAttr(formValues.email)}"
                   class="w-full pl-9 pr-3 py-2.5 bg-surface-container-low border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-xs font-tabular-data" />
               </div>
             </div>
@@ -140,6 +161,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
                   id="inputPassword" 
                   required 
                   placeholder="${t('auth.passwordPlaceholder', 'Enter your password')}" 
+                  value="${escapeAttr(formValues.password)}"
                   class="w-full pl-9 pr-10 py-2.5 bg-surface-container-low border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-xs font-tabular-data" />
                 <button 
                   type="button" 
@@ -166,6 +188,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
                     id="inputOfficerKey" 
                     required 
                     placeholder="Enter confidential revenue authority key" 
+                    value="${escapeAttr(formValues.officerKey)}"
                     class="w-full pl-9 pr-3 py-2.5 bg-surface-container-low border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-xs font-tabular-data" />
                 </div>
                 <span class="text-[10px] text-on-surface-variant mt-1 block">
@@ -185,6 +208,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
                     type="text" 
                     id="inputDistrict" 
                     placeholder="${t('auth.districtPlaceholder', 'e.g. Pune')}" 
+                    value="${escapeAttr(formValues.district || 'Pune')}"
                     class="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-xs" />
                 </div>
                 <div>
@@ -195,6 +219,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
                     type="tel" 
                     id="inputPhone" 
                     placeholder="${t('auth.phonePlaceholder', 'e.g. +91 9822001122')}" 
+                    value="${escapeAttr(formValues.phone)}"
                     class="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-xs font-tabular-data" />
                 </div>
               </div>
@@ -238,6 +263,26 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
     attachListeners();
   }
 
+  function syncValuesFromDOM() {
+    const nameInput = container.querySelector('#inputName');
+    if (nameInput) formValues.name = nameInput.value;
+
+    const emailInput = container.querySelector('#inputEmail');
+    if (emailInput) formValues.email = emailInput.value;
+
+    const passwordInput = container.querySelector('#inputPassword');
+    if (passwordInput) formValues.password = passwordInput.value;
+
+    const districtInput = container.querySelector('#inputDistrict');
+    if (districtInput) formValues.district = districtInput.value;
+
+    const phoneInput = container.querySelector('#inputPhone');
+    if (phoneInput) formValues.phone = phoneInput.value;
+
+    const officerKeyInput = container.querySelector('#inputOfficerKey');
+    if (officerKeyInput) formValues.officerKey = officerKeyInput.value;
+  }
+
   function attachListeners() {
     // Role tabs
     const tabCitizen = container.querySelector('#tabRoleCitizen');
@@ -245,6 +290,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
     if (tabCitizen && tabOfficer) {
       tabCitizen.addEventListener('click', () => {
         if (currentRole !== 'citizen') {
+          syncValuesFromDOM();
           currentRole = 'citizen';
           errorMessage = '';
           render();
@@ -252,6 +298,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
       });
       tabOfficer.addEventListener('click', () => {
         if (currentRole !== 'officer') {
+          syncValuesFromDOM();
           currentRole = 'officer';
           errorMessage = '';
           render();
@@ -263,6 +310,7 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
     const toggleModeBtn = container.querySelector('#toggleModeBtn');
     if (toggleModeBtn) {
       toggleModeBtn.addEventListener('click', () => {
+        syncValuesFromDOM();
         currentMode = currentMode === 'login' ? 'register' : 'login';
         errorMessage = '';
         render();
@@ -285,63 +333,80 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
       });
     }
 
-    // Submit handler
+    // Input change synchronization
     const form = container.querySelector('#authMainForm');
     if (form) {
+      form.addEventListener('input', (e) => {
+        const id = e.target.id;
+        if (id === 'inputName') formValues.name = e.target.value;
+        else if (id === 'inputEmail') formValues.email = e.target.value;
+        else if (id === 'inputPassword') formValues.password = e.target.value;
+        else if (id === 'inputDistrict') formValues.district = e.target.value;
+        else if (id === 'inputPhone') formValues.phone = e.target.value;
+        else if (id === 'inputOfficerKey') formValues.officerKey = e.target.value;
+      });
+
+      // Submit handler
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        syncValuesFromDOM();
         errorMessage = '';
 
-        const emailInput = container.querySelector('#inputEmail');
-        const passwordInput = container.querySelector('#inputPassword');
+        const trimmedEmail = (formValues.email || '').trim();
+        const rawPassword = formValues.password || '';
 
-        const email = emailInput ? emailInput.value.trim() : '';
-        const password = passwordInput ? passwordInput.value : '';
-
-        if (!email || !password) {
+        if (!trimmedEmail || !rawPassword) {
           errorMessage = 'Please provide both email and password.';
           render();
           return;
         }
 
-        if (currentMode === 'register' && password.length < 6) {
+        if (currentMode === 'register' && rawPassword.length < 6) {
           errorMessage = 'Password must be at least 6 characters long.';
           render();
           return;
         }
 
+        let payload = null;
+        if (currentMode === 'register') {
+          const trimmedName = (formValues.name || '').trim();
+          if (trimmedName.length === 0) {
+            errorMessage = 'Full Name is required for registration.';
+            render();
+            return;
+          }
+
+          payload = {
+            name: trimmedName,
+            email: trimmedEmail,
+            password: rawPassword,
+            role: currentRole,
+            district: (formValues.district || '').trim() || 'Pune',
+            phone: (formValues.phone || '').trim(),
+          };
+
+          if (currentRole === 'officer') {
+            payload.officer_key = (formValues.officerKey || '').trim();
+            payload.designation = 'Special Land Acquisition Officer';
+            payload.department = 'Revenue & Cadastral Administration';
+          }
+        }
+
         isLoading = true;
-        render();
+        const submitBtn = container.querySelector('#authSubmitBtn');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+            <span>${currentMode === 'login' ? t('auth.signingIn', 'Authenticating...') : t('auth.registering', 'Creating Account...')}</span>
+          `;
+        }
 
         try {
           let authResult;
           if (currentMode === 'login') {
-            authResult = await authService.login(email, password);
+            authResult = await authService.login(trimmedEmail, rawPassword);
           } else {
-            const nameInput = container.querySelector('#inputName');
-            const districtInput = container.querySelector('#inputDistrict');
-            const phoneInput = container.querySelector('#inputPhone');
-
-            const payload = {
-              name: nameInput ? nameInput.value.trim() : '',
-              email,
-              password,
-              role: currentRole,
-              district: districtInput ? districtInput.value.trim() : 'Pune',
-              phone: phoneInput ? phoneInput.value.trim() : '',
-            };
-
-            if (currentRole === 'officer') {
-              const officerKeyInput = container.querySelector('#inputOfficerKey');
-              payload.officer_key = officerKeyInput ? officerKeyInput.value.trim() : '';
-              payload.designation = 'Special Land Acquisition Officer';
-              payload.department = 'Revenue & Cadastral Administration';
-            }
-
-            if (!payload.name) {
-              throw new Error('Full Name is required for registration.');
-            }
-
             authResult = await authService.register(payload);
           }
 

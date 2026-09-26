@@ -88,6 +88,53 @@ def test_duplicate_email_registration_rejected():
     assert resp2.status_code == 409
 
 
+def test_register_name_validation_matrix():
+    """
+    Regression test for registration name validation:
+    - Accepts standard multi-word names: "Rameshwar Patil", "Rameshwar Kumar Patil"
+    - Accepts single-word legal names: "Rameshwar", "Madonna"
+    - Accepts single-letter names: "A"
+    - Trims surrounding whitespace: "  Rameshwar Patil  " -> "Rameshwar Patil"
+    - Rejects empty strings ("") and whitespace-only strings ("   ") with 422 Unprocessable Entity
+    """
+    valid_test_cases = [
+        ("Rameshwar Patil", "rameshwar.patil@example.com", "Rameshwar Patil"),
+        ("Rameshwar", "rameshwar.single@example.com", "Rameshwar"),
+        ("Rameshwar Kumar Patil", "rameshwar.kumar.patil@example.com", "Rameshwar Kumar Patil"),
+        ("Madonna", "madonna.legal@example.com", "Madonna"),
+        ("A", "a.singleletter@example.com", "A"),
+        ("   Rameshwar Patil   ", "rameshwar.trimmed@example.com", "Rameshwar Patil"),
+    ]
+
+    for input_name, email, expected_stored_name in valid_test_cases:
+        resp = client.post("/api/auth/register", json={
+            "name": input_name,
+            "email": email,
+            "role": "citizen",
+            "password": "ValidPassword@123",
+            "district": "Pune"
+        })
+        assert resp.status_code == 201, f"Failed for valid name: '{input_name}', got {resp.status_code}: {resp.text}"
+        data = resp.json()
+        assert data["user"]["name"] == expected_stored_name, f"Expected name '{expected_stored_name}', got '{data['user']['name']}'"
+        assert "access_token" in data
+
+    # Rejected names (empty or whitespace only)
+    invalid_names = ["", "   ", "\t", "\n  \t  "]
+    for idx, invalid_name in enumerate(invalid_names):
+        resp = client.post("/api/auth/register", json={
+            "name": invalid_name,
+            "email": f"invalid.name.{idx}@example.com",
+            "role": "citizen",
+            "password": "ValidPassword@123",
+            "district": "Pune"
+        })
+        assert resp.status_code == 422, f"Expected 422 for name '{invalid_name}', got {resp.status_code}: {resp.text}"
+        error_detail = resp.json()["detail"]
+        # Error should reference name validation
+        assert any("name" in str(err) or "Full Name" in str(err) for err in error_detail)
+
+
 def test_login_success_and_me():
     # Register user
     client.post("/api/auth/register", json={
