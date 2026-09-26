@@ -97,14 +97,34 @@ export const caseService = {
   },
 
   // ============================================================
-  // Documents Metadata
+  // Documents & Object Storage
   // ============================================================
   async createCaseDocument(caseId, docData) {
     return apiClient.post(`/api/cases/${encodeURIComponent(caseId)}/documents`, docData);
   },
 
+  async requestDocumentUploadUrl(caseId, payload) {
+    return apiClient.post(`/api/cases/${encodeURIComponent(caseId)}/documents/upload-url`, payload);
+  },
+
+  async confirmDocumentUpload(caseId, payload) {
+    return apiClient.post(`/api/cases/${encodeURIComponent(caseId)}/documents/confirm`, payload);
+  },
+
+  async uploadCaseDocumentFile(caseId, formData) {
+    return apiClient.upload(`/api/cases/${encodeURIComponent(caseId)}/documents/upload`, formData);
+  },
+
   async getCaseDocuments(caseId) {
     return apiClient.get(`/api/cases/${encodeURIComponent(caseId)}/documents`);
+  },
+
+  async getDocumentAccessUrl(caseId, documentId) {
+    return apiClient.get(`/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(documentId)}/access-url`);
+  },
+
+  getDocumentDownloadUrl(caseId, documentId) {
+    return `${apiClient.baseUrl}/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(documentId)}/download`;
   },
 
   // ============================================================

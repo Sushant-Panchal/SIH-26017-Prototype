@@ -269,6 +269,7 @@ async function loadCaseDocuments(caseId) {
     listEl.innerHTML = docs.map(d => {
       const isVerified = d.verification_status === 'verified';
       const isRejected = d.verification_status === 'rejected';
+      const downloadUrl = caseService.getDocumentDownloadUrl(caseId, d.document_id);
 
       return `
         <div class="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-lg flex items-center justify-between gap-3 text-xs">
@@ -277,19 +278,30 @@ async function loadCaseDocuments(caseId) {
               <span class="material-symbols-outlined text-[18px]">description</span>
             </span>
             <div>
-              <div class="font-semibold text-on-surface">${d.file_name}</div>
+              <div class="font-semibold text-on-surface flex items-center gap-1.5">
+                <span>${d.file_name}</span>
+                <a href="${downloadUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline flex items-center gap-0.5 text-[11px]" title="Inspect file">
+                  <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                </a>
+              </div>
               <div class="text-[11px] text-on-surface-variant capitalize">${d.document_type.replace(/_/g, ' ')} • Uploaded on ${new Date(d.uploaded_at).toLocaleDateString()}</div>
-              ${d.rejection_reason ? `<div class="text-[11px] text-error mt-0.5">Rejection reason: ${d.rejection_reason}</div>` : ''}
+              ${d.rejection_reason ? `<div class="text-[11px] text-error mt-0.5 font-medium">Rejection reason: ${d.rejection_reason}</div>` : ''}
             </div>
           </div>
 
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
-            isVerified ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300' :
-            isRejected ? 'bg-rose-500/20 text-rose-800 dark:text-rose-300' :
-            'bg-amber-500/20 text-amber-800 dark:text-amber-300'
-          }">
-            ${d.verification_status}
-          </span>
+          <div class="flex items-center gap-2">
+            <a href="${downloadUrl}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface text-[11px] font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">visibility</span>
+              <span class="hidden sm:inline">View</span>
+            </a>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
+              isVerified ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300' :
+              isRejected ? 'bg-rose-500/20 text-rose-800 dark:text-rose-300' :
+              'bg-amber-500/20 text-amber-800 dark:text-amber-300'
+            }">
+              ${d.verification_status}
+            </span>
+          </div>
         </div>
       `;
     }).join('');
@@ -345,13 +357,13 @@ function renderCitizenDocumentUploadCard(caseId) {
         <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[24px]">notification_important</span>
         <div>
           <h4 class="font-bold text-sm">Action Required: Officer Requested Supporting Document</h4>
-          <p class="text-xs opacity-90">Please provide the certified document so the SLAO can proceed with investigation.</p>
+          <p class="text-xs opacity-90">Please provide the certified document file (PDF or Image, max 15MB) so the SLAO can proceed with investigation.</p>
         </div>
       </div>
 
       <form id="respondDocUploadForm" class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
         <div>
-          <label class="block font-semibold text-on-surface mb-1">Document Type</label>
+          <label class="block font-semibold text-on-surface mb-1">Document Type *</label>
           <select id="respDocType" class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface">
             <option value="7_12_extract">7/12 Extract</option>
             <option value="compensation_notice">Compensation Notice</option>
@@ -362,8 +374,8 @@ function renderCitizenDocumentUploadCard(caseId) {
         </div>
 
         <div>
-          <label class="block font-semibold text-on-surface mb-1">File Name</label>
-          <input type="text" id="respFileName" required placeholder="e.g. certified_712_update.pdf" class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface" />
+          <label class="block font-semibold text-on-surface mb-1">Choose File (.pdf, .jpg, .png) *</label>
+          <input type="file" id="respFileInput" accept=".pdf,.jpg,.jpeg,.png,.tiff" class="w-full px-2 py-1.5 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-primary file:text-on-primary file:font-semibold" />
         </div>
 
         <div class="flex items-end">
@@ -373,6 +385,7 @@ function renderCitizenDocumentUploadCard(caseId) {
           </button>
         </div>
       </form>
+      <div id="uploadStatusMsg" class="hidden text-xs"></div>
     </div>
   `;
 
@@ -380,31 +393,62 @@ function renderCitizenDocumentUploadCard(caseId) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('respSubmitBtn');
+    const statusMsg = document.getElementById('uploadStatusMsg');
     btn.disabled = true;
-    btn.textContent = 'Uploading...';
+    btn.textContent = 'Uploading to Storage...';
 
     const activeUser = authService.getStoredUser();
     if (!activeUser) {
       alert('Authentication required to upload documents.');
+      btn.disabled = false;
+      btn.textContent = 'Upload Document';
       return;
     }
-    const fileName = document.getElementById('respFileName').value.trim();
+
     const docType = document.getElementById('respDocType').value;
+    const fileInput = document.getElementById('respFileInput');
+    const selectedFile = fileInput?.files?.[0];
 
     try {
-      await caseService.createCaseDocument(caseId, {
-        uploaded_by: activeUser.user_id,
-        document_type: docType,
-        file_name: fileName,
-        storage_reference: `storage/cases/${caseId}/${fileName}`,
-      });
+      if (selectedFile) {
+        if (selectedFile.size > 15 * 1024 * 1024) {
+          throw new Error('File exceeds maximum allowed size of 15MB.');
+        }
 
-      alert('Document registered and attached to case audit trail.');
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('document_type', docType);
+
+        await caseService.uploadCaseDocumentFile(caseId, formData);
+      } else {
+        const fallbackName = `${docType}_document.pdf`;
+        await caseService.createCaseDocument(caseId, {
+          uploaded_by: activeUser.user_id,
+          document_type: docType,
+          file_name: fallbackName,
+          storage_reference: `cases/${caseId}/${fallbackName}`,
+        });
+      }
+
+      if (statusMsg) {
+        statusMsg.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-semibold';
+        statusMsg.textContent = 'Document successfully uploaded and attached to case dossier.';
+        statusMsg.classList.remove('hidden');
+      }
+
       loadCaseDocuments(caseId);
       loadCaseTimeline(caseId);
-      section.innerHTML = '';
+      setTimeout(() => {
+        section.innerHTML = '';
+      }, 1200);
     } catch (err) {
-      alert(`Upload failed: ${err.message}`);
+      if (statusMsg) {
+        statusMsg.className = 'text-xs text-error font-semibold';
+        statusMsg.textContent = `Upload failed: ${err.message}`;
+        statusMsg.classList.remove('hidden');
+      } else {
+        alert(`Upload failed: ${err.message}`);
+      }
     } finally {
       btn.disabled = false;
       btn.textContent = 'Upload Document';

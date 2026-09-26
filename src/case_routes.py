@@ -5,9 +5,9 @@ Implements endpoints for Users, Lands, Cases, Documents, Audit Trail, and Notifi
 
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends, Header
+import os
 import logging
-
+from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form, Response
 from fastapi.security import HTTPAuthorizationCredentials
 from .database import get_database
 from .auth import security_scheme, decode_access_token
@@ -33,9 +33,23 @@ from .case_models import (
     CaseDocumentResponse,
     DocumentRequestPayload,
     DocumentVerifyPayload,
+    DocumentUploadUrlRequest,
+    DocumentUploadUrlResponse,
+    DocumentConfirmRequest,
+    DocumentAccessUrlResponse,
     CaseEventCreate,
     CaseEventResponse,
     NotificationResponse,
+)
+from .storage import (
+    get_storage_provider,
+    validate_file_metadata,
+    build_object_key,
+    sanitize_filename,
+    StorageError,
+    StorageConfigurationError,
+    StorageValidationError,
+    MAX_FILE_SIZE_BYTES,
 )
 
 logger = logging.getLogger("bhoomi_sakha.case_routes")
@@ -796,6 +810,12 @@ async def create_case_document(case_id: str, payload: CaseDocumentCreate, auth_u
         if payload.uploaded_by != auth_user.get("user_id"):
             raise HTTPException(status_code=403, detail="Forbidden: You cannot upload documents under another citizen's identity.")
 
+    # Validate file metadata
+    try:
+        validate_file_metadata(filename=payload.file_name)
+    except StorageValidationError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+
     await get_user_or_404(payload.uploaded_by, db=db)
 
     doc_id = generate_prefixed_id("DOC")
@@ -807,12 +827,13 @@ async def create_case_document(case_id: str, payload: CaseDocumentCreate, auth_u
         "land_id": payload.land_id or case.get("land_id"),
         "uploaded_by": payload.uploaded_by,
         "document_type": payload.document_type,
-        "file_name": payload.file_name,
+        "file_name": sanitize_filename(payload.file_name),
         "storage_reference": payload.storage_reference,
         "verification_status": DocumentVerificationStatus.PENDING.value,
         "uploaded_at": now,
         "verified_at": None,
         "verified_by": None,
+        "rejection_reason": None,
     }
 
     case_docs = db.get_collection("case_documents")
@@ -825,10 +846,256 @@ async def create_case_document(case_id: str, payload: CaseDocumentCreate, auth_u
         action="document_uploaded",
         old_status=case.get("status"),
         new_status=case.get("status"),
-        comment=f"Document '{payload.file_name}' ({payload.document_type}) uploaded.",
+        comment=f"Document '{doc['file_name']}' ({payload.document_type}) uploaded.",
         metadata={"document_id": doc_id, "document_type": payload.document_type},
         db=db,
     )
+
+    return CaseDocumentResponse(**sanitize_doc(doc))
+
+
+@router.post("/cases/{case_id}/documents/upload-url", response_model=DocumentUploadUrlResponse)
+async def request_document_upload_url(
+    case_id: str,
+    payload: DocumentUploadUrlRequest,
+    auth_user: Optional[dict] = Depends(get_auth_context),
+):
+    """
+    Generates a secure, pre-signed upload URL for direct-to-cloud object storage.
+    Validates user authentication, case ownership, file extension, and size.
+    """
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Authentication required to request upload URL.")
+
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    if auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot upload documents to another citizen's case.")
+
+    try:
+        validate_file_metadata(
+            filename=payload.file_name,
+            content_type=payload.content_type,
+            file_size=payload.file_size,
+        )
+    except StorageValidationError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+
+    storage = get_storage_provider()
+    if not storage.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Production object storage is not configured. AWS S3 credentials are required."
+        )
+
+    doc_id = generate_prefixed_id("DOC")
+    object_key = build_object_key(case_id, doc_id, payload.file_name)
+    content_type = payload.content_type or "application/pdf"
+
+    try:
+        upload_info = storage.generate_upload_url(object_key, content_type=content_type)
+    except StorageConfigurationError as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    except StorageError as err:
+        raise HTTPException(status_code=500, detail=f"Storage provider error: {err}")
+
+    return DocumentUploadUrlResponse(
+        document_id=doc_id,
+        case_id=case_id,
+        object_key=object_key,
+        storage_reference=upload_info["storage_reference"],
+        upload_url=upload_info["upload_url"],
+        fields=upload_info.get("fields"),
+        expires_in=upload_info.get("expires_in", 900),
+    )
+
+
+@router.post("/cases/{case_id}/documents/confirm", response_model=CaseDocumentResponse, status_code=201)
+async def confirm_document_upload(
+    case_id: str,
+    payload: DocumentConfirmRequest,
+    auth_user: Optional[dict] = Depends(get_auth_context),
+):
+    """
+    Confirms that a document was uploaded via pre-signed URL and persists metadata in MongoDB.
+    Appends audit trail event and generates notification for the assigned officer.
+    """
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Authentication required to confirm upload.")
+
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    if auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot confirm documents for another citizen's case.")
+
+    try:
+        validate_file_metadata(filename=payload.file_name)
+    except StorageValidationError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+
+    storage = get_storage_provider()
+    if not storage.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Production object storage is not configured. AWS S3 credentials are required."
+        )
+
+    safe_name = sanitize_filename(payload.file_name)
+    storage_ref = f"s3://{os.getenv('AWS_S3_BUCKET', 'bhoomi-sakha')}/{payload.object_key}" if storage.get_provider_name() == "s3" else f"mock://bhoomi-sakha/{payload.object_key}"
+    now = now_utc()
+
+    doc = {
+        "document_id": payload.document_id,
+        "case_id": case_id,
+        "land_id": payload.land_id or case.get("land_id"),
+        "uploaded_by": auth_user.get("user_id"),
+        "document_type": payload.document_type,
+        "file_name": safe_name,
+        "storage_reference": storage_ref,
+        "verification_status": DocumentVerificationStatus.PENDING.value,
+        "uploaded_at": now,
+        "verified_at": None,
+        "verified_by": None,
+        "rejection_reason": None,
+    }
+
+    case_docs = db.get_collection("case_documents")
+    await case_docs.insert_one(doc)
+
+    # Append audit trail event
+    await append_case_event(
+        case_id=case_id,
+        actor_user_id=auth_user.get("user_id"),
+        action="document_uploaded",
+        old_status=case.get("status"),
+        new_status=case.get("status"),
+        comment=f"Document '{safe_name}' ({payload.document_type}) uploaded to durable storage.",
+        metadata={"document_id": payload.document_id, "document_type": payload.document_type, "storage_reference": storage_ref},
+        db=db,
+    )
+
+    # Notify assigned officer
+    if case.get("assigned_officer_id"):
+        await create_notification(
+            user_id=case["assigned_officer_id"],
+            title="Supporting Document Uploaded",
+            message=f"Citizen uploaded '{safe_name}' ({payload.document_type}) for case {case_id}.",
+            notif_type=NotificationType.CASE_STATUS_CHANGED.value,
+            case_id=case_id,
+            db=db,
+        )
+
+    return CaseDocumentResponse(**sanitize_doc(doc))
+
+
+@router.post("/cases/{case_id}/documents/upload", response_model=CaseDocumentResponse, status_code=201)
+async def upload_case_document_file(
+    case_id: str,
+    file: UploadFile = File(...),
+    document_type: str = Form(...),
+    land_id: Optional[str] = Form(None),
+    auth_user: Optional[dict] = Depends(get_auth_context),
+):
+    """
+    Direct authenticated multipart upload endpoint.
+    Safely reads file stream, enforces 15MB size ceiling, uploads to configured object storage,
+    persists metadata in MongoDB, and triggers audit & notification events.
+    """
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Authentication required to upload documents.")
+
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    if auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot upload documents to another citizen's case.")
+
+    # Enforce size ceiling during stream read
+    file_bytes = await file.read(MAX_FILE_SIZE_BYTES + 1)
+    if len(file_bytes) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds maximum allowable limit of 15MB ({MAX_FILE_SIZE_BYTES} bytes)."
+        )
+
+    try:
+        validate_file_metadata(
+            filename=file.filename,
+            content_type=file.content_type,
+            file_size=len(file_bytes),
+        )
+    except StorageValidationError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+
+    storage = get_storage_provider()
+    if not storage.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Production object storage is not configured. AWS S3 credentials are required."
+        )
+
+    doc_id = generate_prefixed_id("DOC")
+    safe_name = sanitize_filename(file.filename)
+    object_key = build_object_key(case_id, doc_id, safe_name)
+
+    try:
+        upload_result = storage.upload_file(
+            object_key=object_key,
+            file_data=file_bytes,
+            content_type=file.content_type or "application/pdf",
+        )
+    except StorageConfigurationError as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    except StorageError as err:
+        raise HTTPException(status_code=500, detail=f"Storage upload failed: {err}")
+
+    now = now_utc()
+    storage_ref = upload_result.get("storage_reference", f"s3://{object_key}")
+    doc = {
+        "document_id": doc_id,
+        "case_id": case_id,
+        "land_id": land_id or case.get("land_id"),
+        "uploaded_by": auth_user.get("user_id"),
+        "document_type": document_type,
+        "file_name": safe_name,
+        "storage_reference": storage_ref,
+        "verification_status": DocumentVerificationStatus.PENDING.value,
+        "uploaded_at": now,
+        "verified_at": None,
+        "verified_by": None,
+        "rejection_reason": None,
+    }
+
+    case_docs = db.get_collection("case_documents")
+    await case_docs.insert_one(doc)
+
+    # Append audit trail event
+    await append_case_event(
+        case_id=case_id,
+        actor_user_id=auth_user.get("user_id"),
+        action="document_uploaded",
+        old_status=case.get("status"),
+        new_status=case.get("status"),
+        comment=f"Document '{safe_name}' ({document_type}) uploaded to durable storage.",
+        metadata={"document_id": doc_id, "document_type": document_type, "storage_reference": storage_ref},
+        db=db,
+    )
+
+    # Notify assigned officer
+    if case.get("assigned_officer_id"):
+        await create_notification(
+            user_id=case["assigned_officer_id"],
+            title="Supporting Document Uploaded",
+            message=f"Citizen uploaded '{safe_name}' ({document_type}) for case {case_id}.",
+            notif_type=NotificationType.CASE_STATUS_CHANGED.value,
+            case_id=case_id,
+            db=db,
+        )
 
     return CaseDocumentResponse(**sanitize_doc(doc))
 
@@ -846,6 +1113,100 @@ async def get_case_documents(case_id: str, auth_user: Optional[dict] = Depends(g
     return [CaseDocumentResponse(**sanitize_doc(d)) for d in results]
 
 
+@router.get("/cases/{case_id}/documents/{document_id}/access-url", response_model=DocumentAccessUrlResponse)
+async def get_document_access_url(
+    case_id: str,
+    document_id: str,
+    auth_user: Optional[dict] = Depends(get_auth_context),
+):
+    """
+    Generates a secure, short-lived pre-signed access URL for authorized document inspection.
+    Citizens can access only documents in their own cases.
+    """
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Authentication required to access documents.")
+
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    if auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot access documents from another citizen's case.")
+
+    case_docs = db.get_collection("case_documents")
+    doc = await case_docs.find_one({"document_id": document_id, "case_id": case_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found on case '{case_id}'.")
+
+    storage = get_storage_provider()
+    if not storage.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Production object storage is not configured. AWS S3 credentials are required."
+        )
+
+    try:
+        download_url = storage.generate_download_url(doc["storage_reference"])
+    except StorageConfigurationError as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    except StorageError as err:
+        raise HTTPException(status_code=500, detail=f"Storage error generating access URL: {err}")
+
+    return DocumentAccessUrlResponse(
+        document_id=document_id,
+        case_id=case_id,
+        file_name=doc.get("file_name", "document.pdf"),
+        download_url=download_url,
+        expires_in=900,
+    )
+
+
+@router.get("/cases/{case_id}/documents/{document_id}/download")
+async def download_case_document(
+    case_id: str,
+    document_id: str,
+    auth_user: Optional[dict] = Depends(get_auth_context),
+):
+    """
+    Streams file directly from object storage to authorized citizen or revenue officer.
+    """
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Authentication required to download documents.")
+
+    db = get_database()
+    case = await get_case_or_404(case_id, db=db)
+
+    if auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot access documents from another citizen's case.")
+
+    case_docs = db.get_collection("case_documents")
+    doc = await case_docs.find_one({"document_id": document_id, "case_id": case_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found on case '{case_id}'.")
+
+    storage = get_storage_provider()
+    if not storage.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Production object storage is not configured. AWS S3 credentials are required."
+        )
+
+    try:
+        file_bytes, content_type = storage.download_file(doc["storage_reference"])
+    except StorageConfigurationError as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    except StorageError as err:
+        raise HTTPException(status_code=404, detail=f"File not found in storage: {err}")
+
+    safe_name = sanitize_filename(doc.get("file_name", "document.pdf"))
+    return Response(
+        content=file_bytes,
+        media_type=content_type,
+        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+    )
+
+
 @router.post("/cases/{case_id}/documents/{document_id}/verify", response_model=CaseDocumentResponse)
 async def verify_document(case_id: str, document_id: str, payload: DocumentVerifyPayload, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
@@ -854,6 +1215,14 @@ async def verify_document(case_id: str, document_id: str, payload: DocumentVerif
     # Check officer role
     if auth_user and auth_user.get("role") not in (UserRole.OFFICER.value, UserRole.SUPER_ADMIN.value):
         raise HTTPException(status_code=403, detail="Forbidden: Only officers can verify documents.")
+
+    # Rejection requires mandatory reason
+    if payload.verification_status == DocumentVerificationStatus.REJECTED:
+        if not payload.rejection_reason or not payload.rejection_reason.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Rejection reason is required when rejecting a document."
+            )
 
     case_docs = db.get_collection("case_documents")
     doc = await case_docs.find_one({"document_id": document_id, "case_id": case_id})
@@ -868,14 +1237,14 @@ async def verify_document(case_id: str, document_id: str, payload: DocumentVerif
         "verified_by": payload.actor_user_id,
     }
     if payload.rejection_reason:
-        update_fields["rejection_reason"] = payload.rejection_reason
+        update_fields["rejection_reason"] = payload.rejection_reason.strip()
 
     await case_docs.update_one({"document_id": document_id}, {"$set": update_fields})
 
     action_name = "document_verified" if payload.verification_status == DocumentVerificationStatus.VERIFIED else "document_rejected"
     comment = f"Document '{doc.get('file_name')}' was {status_val}."
     if payload.rejection_reason:
-        comment += f" Reason: {payload.rejection_reason}"
+        comment += f" Reason: {payload.rejection_reason.strip()}"
 
     await append_case_event(
         case_id=case_id,
@@ -889,7 +1258,7 @@ async def verify_document(case_id: str, document_id: str, payload: DocumentVerif
     notif_title = f"Document {status_val.capitalize()}"
     notif_msg = f"Your uploaded document '{doc.get('file_name')}' for case {case_id} has been {status_val}."
     if payload.rejection_reason:
-        notif_msg += f" Note: {payload.rejection_reason}"
+        notif_msg += f" Note: {payload.rejection_reason.strip()}"
 
     await create_notification(
         user_id=case["citizen_id"],

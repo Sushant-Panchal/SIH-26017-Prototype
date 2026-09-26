@@ -263,6 +263,40 @@ class DocumentVerifyPayload(BaseModel):
     actor_user_id: str
 
 
+class DocumentUploadUrlRequest(BaseModel):
+    land_id: Optional[str] = None
+    document_type: str = Field(..., min_length=2, max_length=80)
+    file_name: str = Field(..., min_length=1, max_length=255)
+    file_size: Optional[int] = Field(None, gt=0)
+    content_type: Optional[str] = None
+
+
+class DocumentUploadUrlResponse(BaseModel):
+    document_id: str
+    case_id: str
+    object_key: str
+    storage_reference: str
+    upload_url: str
+    fields: Optional[Dict[str, str]] = None
+    expires_in: int
+
+
+class DocumentConfirmRequest(BaseModel):
+    document_id: str
+    object_key: str
+    document_type: str
+    file_name: str
+    land_id: Optional[str] = None
+
+
+class DocumentAccessUrlResponse(BaseModel):
+    document_id: str
+    case_id: str
+    file_name: str
+    download_url: str
+    expires_in: int
+
+
 # ============================================================
 # CASE EVENTS / AUDIT TRAIL
 # ============================================================

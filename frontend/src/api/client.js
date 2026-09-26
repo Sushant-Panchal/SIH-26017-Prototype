@@ -37,97 +37,108 @@ async function request(endpoint, options = {}) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeout || 15000);
 
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    const defaultHeaders = {
+      'Accept': 'application/json',
+    };
+
+    // Only set application/json if body is not FormData
+    if (!(options.body instanceof FormData)) {
+      defaultHeaders['Content-Type'] = 'application/json';
+    }
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('bs_token') : null;
+    if (token) {
+      defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...defaultHeaders,
+          ...(options.headers || {}),
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      if (!response.ok) {
+        const errorDetail = data && typeof data === 'object' && data.detail 
+          ? data.detail 
+          : `Request failed with status ${response.status}`;
+        throw new ApiError(errorDetail, response.status, data);
+      }
+
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      if (error.name === 'AbortError') {
+        throw new ApiError('Request timed out while contacting Bhoomi Sakha prediction engine.', 408);
+      }
+
+      console.debug(`[ApiClient] Network request failed for ${endpoint}:`, error);
+      throw new ApiError(
+        'Service is temporarily unavailable. Please try again.',
+        0,
+        error
+      );
+    }
+  }
+
+  export const apiClient = {
+    baseUrl: API_BASE_URL,
+
+    get(endpoint, options = {}) {
+      return request(endpoint, { ...options, method: 'GET' });
+    },
+
+    post(endpoint, body, options = {}) {
+      return request(endpoint, {
+        ...options,
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+    },
+
+    upload(endpoint, formData, options = {}) {
+      return request(endpoint, {
+        ...options,
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    patch(endpoint, body, options = {}) {
+      return request(endpoint, {
+        ...options,
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+    },
+
+    put(endpoint, body, options = {}) {
+      return request(endpoint, {
+        ...options,
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+    },
+
+    delete(endpoint, options = {}) {
+      return request(endpoint, { ...options, method: 'DELETE' });
+    },
   };
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem('bs_token') : null;
-  if (token) {
-    defaultHeaders['Authorization'] = `Bearer ${token}`;
-  }
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...(options.headers || {}),
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    const contentType = response.headers.get('content-type') || '';
-    let data = null;
-    if (contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-
-    if (!response.ok) {
-      const errorDetail = data && typeof data === 'object' && data.detail 
-        ? data.detail 
-        : `Request failed with status ${response.status}`;
-      throw new ApiError(errorDetail, response.status, data);
-    }
-
-    return data;
-  } catch (error) {
-    clearTimeout(timeoutId);
-
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    if (error.name === 'AbortError') {
-      throw new ApiError('Request timed out while contacting Bhoomi Sakha prediction engine.', 408);
-    }
-
-    // Network error (e.g. backend server is stopped or unreachable)
-    console.debug(`[ApiClient] Network request failed for ${endpoint}:`, error);
-    throw new ApiError(
-      'Prediction service is temporarily unavailable. Please try again.',
-      0,
-      error
-    );
-  }
-}
-
-export const apiClient = {
-  baseUrl: API_BASE_URL,
-
-  get(endpoint, options = {}) {
-    return request(endpoint, { ...options, method: 'GET' });
-  },
-
-  post(endpoint, body, options = {}) {
-    return request(endpoint, {
-      ...options,
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-  },
-
-  patch(endpoint, body, options = {}) {
-    return request(endpoint, {
-      ...options,
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    });
-  },
-
-  put(endpoint, body, options = {}) {
-    return request(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-  },
-
-  delete(endpoint, options = {}) {
-    return request(endpoint, { ...options, method: 'DELETE' });
-  },
-};

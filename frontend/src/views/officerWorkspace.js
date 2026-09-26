@@ -393,18 +393,22 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
                         </div>
                       ` : ''}
 
-                      ${isPending ? `
-                        <div class="flex items-center justify-end gap-2 pt-1 border-t border-outline-variant/20">
-                          <button data-doc-id="${doc.document_id}" class="btnVerifyDoc px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold flex items-center gap-1">
+                      <div class="flex items-center justify-end gap-2 pt-1 border-t border-outline-variant/20">
+                        <a href="${caseService.getDocumentDownloadUrl(caseData.case_id, doc.document_id)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 text-on-surface rounded text-[11px] font-semibold flex items-center gap-1 transition-colors">
+                          <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                          <span>Open Document</span>
+                        </a>
+                        ${isPending ? `
+                          <button data-doc-id="${doc.document_id}" class="btnVerifyDoc px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold flex items-center gap-1 transition-colors">
                             <span class="material-symbols-outlined text-[13px]">check</span>
                             <span>Verify Document</span>
                           </button>
-                          <button data-doc-id="${doc.document_id}" class="btnRejectDoc px-2.5 py-1 bg-error hover:opacity-90 text-white rounded text-[11px] font-bold flex items-center gap-1">
+                          <button data-doc-id="${doc.document_id}" class="btnRejectDoc px-2.5 py-1 bg-error hover:opacity-90 text-white rounded text-[11px] font-bold flex items-center gap-1 transition-colors">
                             <span class="material-symbols-outlined text-[13px]">close</span>
                             <span>Reject with Reason</span>
                           </button>
-                        </div>
-                      ` : ''}
+                        ` : ''}
+                      </div>
                     </div>
                   `;
                 }).join('')}
