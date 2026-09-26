@@ -4,11 +4,22 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from contextlib import asynccontextmanager
+
 from .inference import DelayPredictor
+from .database import init_indexes
+from .case_routes import router as case_router
 
 
 MODEL_PATH = "models/baseline_model.json"
 FEATURE_NAMES_PATH = "models/feature_names.joblib"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Establish persistent database indexes on startup
+    await init_indexes()
+    yield
 
 
 app = FastAPI(
@@ -18,6 +29,7 @@ app = FastAPI(
         "delay risk assessment."
     ),
     version="1.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -27,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Persistent Case Management Router
+app.include_router(case_router)
 
 
 # Load model once when API starts.
