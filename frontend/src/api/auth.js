@@ -55,6 +55,37 @@ export const authService = {
   },
 
   /**
+   * Validates stored credentials with the backend and synchronizes session state.
+   */
+  async verifySession() {
+    const token = this.getStoredToken();
+    if (!token) {
+      this.clearSession();
+      return null;
+    }
+    try {
+      const user = await apiClient.get('/api/auth/me');
+      if (user && user.user_id) {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        return user;
+      }
+      this.clearSession();
+      return null;
+    } catch (err) {
+      this.clearSession();
+      return null;
+    }
+  },
+
+  clearSession() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+    this.notifyAuthChange(null);
+  },
+
+  /**
    * Terminate session
    */
   async logout() {
@@ -63,9 +94,7 @@ export const authService = {
     } catch (_) {
       // Ignore network failures on logout
     } finally {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      this.notifyAuthChange(null);
+      this.clearSession();
     }
   },
 
