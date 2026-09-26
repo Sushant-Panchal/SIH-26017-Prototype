@@ -27,17 +27,30 @@ export default {
   },
   "nav": {
     "dashboard": "डॅशबोर्ड",
+    "cases": "प्रकरण रांग",
     "assessment": "जोखीम मूल्यांकन",
     "projects": "प्रकल्प निर्देशिका",
     "audit": "ऑडिट तपशील",
-    "notifications": "सूचना"
+    "notifications": "सूचना",
+    "citizenDashboard": "डॅशबोर्ड",
+    "citizenLands": "माझी जमीन",
+    "citizenRisk": "विलंब जोखीम तपासा",
+    "citizenComplaint": "तक्रार दाखल करा",
+    "citizenCases": "माझी प्रकरणे"
   },
   "views": {
     "dashboard": "राष्ट्रीय कॅडस्ट्रल मॅट्रिक्स (सिंहावलोकन)",
+    "cases": "जमीन संपादन तक्रार व प्रकरण रांग",
+    "officer-case-workspace": "अधिकारी प्रकरण कार्यक्षेत्र व डॉसियर",
     "assessment": "अंदाजित विलंब-जोखीम मूल्यांकन कॉकपिट",
     "projects": "राष्ट्रीय जमीन संपादन प्रकल्प निर्देशिका",
     "audit": "कॅडस्ट्रल आणि जोखीम तपशीलवार डॉसियर",
-    "notifications": "प्रणाली सूचना आणि ऑपरेशनल अलर्ट"
+    "notifications": "प्रणाली सूचना आणि ऑपरेशनल अलर्ट",
+    "citizen-dashboard": "नागरिक संपादन डॅशबोर्ड",
+    "citizen-lands": "जमीन पार्सल आणि कॅडस्ट्रल अभिलेख",
+    "citizen-risk": "जमीन संपादन विलंब जोखीम अंदाज",
+    "citizen-complaint": "जमीन संपादन तक्रार दाखल करा",
+    "citizen-cases": "तक्रार डॉसियर आणि थेट ट्रॅकिंग"
   },
   "dropdown": {
     "project_type": {
