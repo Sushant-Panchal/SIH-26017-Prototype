@@ -3,7 +3,22 @@
  * Handles communication with the FastAPI backend.
  */
 
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
+const getApiBaseUrl = () => {
+  const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_URL : null;
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal) {
+      // In production (Vercel, custom domain), never call localhost
+      if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+        return 'https://sih-26017-prototype.onrender.com';
+      }
+      return envUrl;
+    }
+  }
+  return envUrl || 'http://127.0.0.1:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(message, status = null, details = null) {

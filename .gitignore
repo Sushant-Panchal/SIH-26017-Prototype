@@ -24,6 +24,10 @@ reports/
 
 # Environment variables
 .env
+.env.*
+*.env
+**/.env
+**/.env.*
 
 # OS
 .DS_Store
