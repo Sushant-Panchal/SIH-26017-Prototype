@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Header
 import logging
 
+from fastapi.security import HTTPAuthorizationCredentials
 from .database import get_database
+from .auth import security_scheme, decode_access_token
 from .case_models import (
     UserRole,
     ComplaintCategory,
@@ -71,6 +73,25 @@ async def get_case_or_404(case_id: str, db=None) -> dict:
     if not c:
         raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found.")
     return c
+
+
+async def get_auth_context(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+) -> Optional[dict]:
+    """Extract authenticated user if Bearer token is provided."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = payload.get("user_id") or payload.get("sub")
+        if user_id:
+            db = get_database()
+            return await db.get_collection("users").find_one({"user_id": user_id})
+    except HTTPException:
+        raise
+    except Exception:
+        return None
+    return None
 
 
 async def append_case_event(
@@ -205,7 +226,13 @@ async def get_land(land_id: str):
 
 
 @router.get("/users/{user_id}/lands", response_model=List[LandResponse])
-async def get_user_lands(user_id: str):
+async def get_user_lands(user_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if auth_user.get("user_id") != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You cannot access another citizen's land holdings.",
+            )
     db = get_database()
     await get_user_or_404(user_id, db=db)
     lands = db.get_collection("lands")
@@ -219,8 +246,16 @@ async def get_user_lands(user_id: str):
 # ============================================================
 
 @router.post("/cases", response_model=CaseResponse, status_code=201)
-async def create_case(payload: CaseCreate):
+async def create_case(payload: CaseCreate, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
+    # If caller authenticated as citizen, ensure they file for themselves
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if payload.citizen_id != auth_user.get("user_id"):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You cannot submit a case under another citizen's identity.",
+            )
+
     # Verify citizen exists
     citizen = await get_user_or_404(payload.citizen_id, db=db)
     if citizen.get("role") != UserRole.CITIZEN.value:
@@ -251,7 +286,7 @@ async def create_case(payload: CaseCreate):
     await cases.insert_one(doc)
 
     # Append case_created event to audit trail
-    actor_id = payload.actor_user_id or payload.citizen_id
+    actor_id = payload.actor_user_id or (auth_user and auth_user.get("user_id")) or payload.citizen_id
     await append_case_event(
         case_id=case_id,
         actor_user_id=actor_id,
@@ -277,13 +312,25 @@ async def create_case(payload: CaseCreate):
 
 
 @router.get("/cases/{case_id}", response_model=CaseResponse)
-async def get_case(case_id: str):
+async def get_case(case_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
     case = await get_case_or_404(case_id)
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Citizens can only access their own case records.",
+            )
     return CaseResponse(**sanitize_doc(case))
 
 
 @router.get("/users/{user_id}/cases", response_model=List[CaseResponse])
-async def get_user_cases(user_id: str):
+async def get_user_cases(user_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if auth_user.get("user_id") != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You cannot access cases filed by another citizen.",
+            )
     db = get_database()
     await get_user_or_404(user_id, db=db)
     cases = db.get_collection("cases")
@@ -293,7 +340,12 @@ async def get_user_cases(user_id: str):
 
 
 @router.get("/officers/{officer_id}/cases", response_model=List[CaseResponse])
-async def get_officer_cases(officer_id: str):
+async def get_officer_cases(officer_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Citizen cannot access officer case queue.",
+        )
     db = get_database()
     officer = await get_user_or_404(officer_id, db=db)
     if officer.get("role") != UserRole.OFFICER.value and officer.get("role") != UserRole.SUPER_ADMIN.value:
@@ -310,9 +362,16 @@ async def get_officer_cases(officer_id: str):
 # ============================================================
 
 @router.post("/cases/{case_id}/assign", response_model=CaseResponse)
-async def assign_case(case_id: str, payload: CaseAssignRequest):
+async def assign_case(case_id: str, payload: CaseAssignRequest, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     case = await get_case_or_404(case_id, db=db)
+
+    # Authorization Check: Auth token role check
+    if auth_user and auth_user.get("role") not in (UserRole.OFFICER.value, UserRole.SUPER_ADMIN.value):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Only officers or administrators can assign cases.",
+        )
 
     # Authorization Check: Actor performing assignment must have officer / admin role
     actor = await get_user_or_404(payload.actor_user_id, db=db)
@@ -381,9 +440,16 @@ async def assign_case(case_id: str, payload: CaseAssignRequest):
 
 
 @router.post("/cases/{case_id}/status", response_model=CaseResponse)
-async def update_case_status(case_id: str, payload: CaseStatusUpdateRequest):
+async def update_case_status(case_id: str, payload: CaseStatusUpdateRequest, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     case = await get_case_or_404(case_id, db=db)
+
+    # Authorization Check: Auth token check
+    if auth_user and auth_user.get("role") not in (UserRole.OFFICER.value, UserRole.SUPER_ADMIN.value):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Only officers or administrators can update case status.",
+        )
 
     # Authorization Check: Actor must be officer or admin
     actor = await get_user_or_404(payload.actor_user_id, db=db)
@@ -524,7 +590,13 @@ async def get_case_documents(case_id: str):
 # ============================================================
 
 @router.get("/users/{user_id}/notifications", response_model=List[NotificationResponse])
-async def get_user_notifications(user_id: str):
+async def get_user_notifications(user_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if auth_user.get("user_id") != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You cannot access another user's notifications.",
+            )
     db = get_database()
     await get_user_or_404(user_id, db=db)
     notifs = db.get_collection("notifications")

@@ -215,11 +215,17 @@ class AsyncMemoryDatabase:
 # DATABASE FACTORY & ACCESSORS
 # ============================================================
 
+def is_production_environment() -> bool:
+    """Detect whether code is running in a live production environment."""
+    env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).lower()
+    return env in ("production", "prod") or bool(os.getenv("RENDER")) or bool(os.getenv("RENDER_SERVICE_ID"))
+
+
 def get_database():
     """
     Returns the persistent application database handle.
-    Connects to Motor if MONGODB_URI is configured and not in in-memory mode;
-    otherwise falls back to AsyncMemoryDatabase.
+    Connects to Motor if MONGODB_URI is configured.
+    Strictly forbids in-memory fallback in production environments.
     """
     global _client, _db
     if _db is not None:
@@ -228,22 +234,43 @@ def get_database():
     uri = os.getenv("MONGODB_URI", "").strip()
     db_name = os.getenv("MONGODB_DATABASE", "bhoomi_sakha").strip()
     force_in_memory = os.getenv("USE_IN_MEMORY_DB", "0").lower() in ("1", "true", "yes")
+    in_prod = is_production_environment()
 
+    if in_prod:
+        if not uri:
+            logger.critical("FATAL: MONGODB_URI is not configured in production environment!")
+            raise RuntimeError(
+                "Production environment requires a valid MONGODB_URI. "
+                "Silent in-memory database fallback is strictly prohibited."
+            )
+        try:
+            from motor.motor_asyncio import AsyncIOMotorClient
+            _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
+            _db = _client[db_name]
+            logger.info("Connected securely to production MongoDB via Motor.")
+            return _db
+        except Exception as exc:
+            logger.critical("FATAL: Failed to connect to production MongoDB: %s", type(exc).__name__)
+            raise RuntimeError(
+                "Could not establish connection to production MongoDB database. "
+                "Failing safely to protect persistent case records."
+            ) from exc
+
+    # In local testing or explicitly configured development with USE_IN_MEMORY_DB=1
     if uri and not force_in_memory:
         try:
             from motor.motor_asyncio import AsyncIOMotorClient
             _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=3000)
             _db = _client[db_name]
-            logger.info("Connected to MongoDB via Motor.")
+            logger.info("Connected to development MongoDB via Motor.")
             return _db
         except Exception as e:
-            logger.warning("Failed to connect to MongoDB URI. Falling back to in-memory database: %s", type(e).__name__)
+            logger.warning("MongoDB URI unreachable in dev; falling back to in-memory store: %s", type(e).__name__)
             _db = AsyncMemoryDatabase(db_name)
             return _db
 
-    # In-memory storage for test or standalone execution
     _db = AsyncMemoryDatabase(db_name)
-    logger.info("Using in-memory persistent database store.")
+    logger.info("Using isolated in-memory database store (test/development mode).")
     return _db
 
 

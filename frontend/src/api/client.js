@@ -27,6 +27,11 @@ async function request(endpoint, options = {}) {
     'Accept': 'application/json',
   };
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem('bs_token') : null;
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
     const response = await fetch(url, {
       ...options,

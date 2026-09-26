@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from .inference import DelayPredictor
 from .database import init_indexes
 from .case_routes import router as case_router
+from .auth_routes import router as auth_router
 
 
 MODEL_PATH = "models/baseline_model.json"
@@ -39,6 +40,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Authentication Router
+app.include_router(auth_router)
 
 # Persistent Case Management Router
 app.include_router(case_router)

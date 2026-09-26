@@ -1,0 +1,266 @@
+"""
+Bhoomi Sakha - Authentication & Security Test Suite
+Verifies identity management, password hashing, JWT expiration,
+role-based access control, citizen isolation, and prevention of privilege escalation.
+"""
+
+from datetime import timedelta
+import pytest
+from fastapi.testclient import TestClient
+
+from src.api import app
+from src.database import reset_database_for_testing
+from src.auth import create_access_token, hash_password, verify_password, OFFICER_REGISTRATION_KEY
+
+client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def setup_clean_db():
+    reset_database_for_testing()
+
+
+def test_password_hashing():
+    pwd = "SecurePassword@123"
+    hashed = hash_password(pwd)
+    assert hashed != pwd
+    assert "$" in hashed
+    assert verify_password(pwd, hashed) is True
+    assert verify_password("WrongPassword", hashed) is False
+
+
+def test_register_citizen_success():
+    resp = client.post("/api/auth/register", json={
+        "name": "Kisan Shinde",
+        "email": "kisan.shinde@example.com",
+        "role": "citizen",
+        "password": "MyStrongPassword@123",
+        "phone": "+91 9822001122"
+    })
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "access_token" in data
+    assert data["user"]["role"] == "citizen"
+    assert data["user"]["email"] == "kisan.shinde@example.com"
+    assert "password" not in data["user"]
+    assert "password_hash" not in data["user"]
+
+
+def test_register_officer_success():
+    resp = client.post("/api/auth/register", json={
+        "name": "SLAO officer Deshmukh",
+        "email": "slao.deshmukh@gov.in",
+        "role": "officer",
+        "password": "OfficerPassword@2026",
+        "officer_key": OFFICER_REGISTRATION_KEY,
+        "designation": "Special Land Acquisition Officer"
+    })
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["user"]["role"] == "officer"
+    assert "access_token" in data
+
+
+def test_role_escalation_attempt_rejected():
+    # Citizen attempts to sign up as officer without secret key
+    resp = client.post("/api/auth/register", json={
+        "name": "Attacker",
+        "email": "attacker@example.com",
+        "role": "officer",
+        "password": "AttackPassword@123",
+        "officer_key": "wrong_key"
+    })
+    assert resp.status_code == 403
+    assert "Officer Registration Key" in resp.json()["detail"]
+
+
+def test_duplicate_email_registration_rejected():
+    payload = {
+        "name": "First User",
+        "email": "duplicate@example.com",
+        "role": "citizen",
+        "password": "Password@123"
+    }
+    resp1 = client.post("/api/auth/register", json=payload)
+    assert resp1.status_code == 201
+
+    resp2 = client.post("/api/auth/register", json=payload)
+    assert resp2.status_code == 409
+
+
+def test_login_success_and_me():
+    # Register user
+    client.post("/api/auth/register", json={
+        "name": "Pooja Patil",
+        "email": "pooja.patil@example.com",
+        "role": "citizen",
+        "password": "PoojaSecure@123"
+    })
+
+    # Login
+    login_resp = client.post("/api/auth/login", json={
+        "email": "pooja.patil@example.com",
+        "password": "PoojaSecure@123"
+    })
+    assert login_resp.status_code == 200
+    token = login_resp.json()["access_token"]
+    assert token
+
+    # Check /me with token
+    me_resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me_resp.status_code == 200
+    assert me_resp.json()["email"] == "pooja.patil@example.com"
+
+
+def test_login_invalid_credentials():
+    client.post("/api/auth/register", json={
+        "name": "Valid User",
+        "email": "valid@example.com",
+        "role": "citizen",
+        "password": "CorrectPassword@123"
+    })
+
+    # Wrong password
+    resp1 = client.post("/api/auth/login", json={
+        "email": "valid@example.com",
+        "password": "WrongPassword@123"
+    })
+    assert resp1.status_code == 401
+
+    # Nonexistent email
+    resp2 = client.post("/api/auth/login", json={
+        "email": "nonexistent@example.com",
+        "password": "AnyPassword@123"
+    })
+    assert resp2.status_code == 401
+
+
+def test_expired_token_rejected():
+    # Generate token that expired 1 hour ago
+    expired_token = create_access_token(
+        user_id="USR-EXPIRED",
+        role="citizen",
+        email="expired@example.com",
+        name="Expired User",
+        expires_delta=timedelta(hours=-1)
+    )
+    resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {expired_token}"})
+    assert resp.status_code == 401
+    assert "expired" in resp.json()["detail"].lower()
+
+
+def test_citizen_data_isolation():
+    # Register Citizen A
+    resp_a = client.post("/api/auth/register", json={
+        "name": "Citizen A",
+        "email": "citizen.a@example.com",
+        "role": "citizen",
+        "password": "PasswordA@123"
+    })
+    token_a = resp_a.json()["access_token"]
+    user_a_id = resp_a.json()["user"]["user_id"]
+
+    # Register Citizen B
+    resp_b = client.post("/api/auth/register", json={
+        "name": "Citizen B",
+        "email": "citizen.b@example.com",
+        "role": "citizen",
+        "password": "PasswordB@123"
+    })
+    token_b = resp_b.json()["access_token"]
+    user_b_id = resp_b.json()["user"]["user_id"]
+
+    # Citizen A adds land and case
+    land_a = client.post("/api/lands", json={
+        "owner_id": user_a_id,
+        "state": "Maharashtra",
+        "district": "Pune",
+        "taluka": "Haveli",
+        "village": "Wagholi",
+        "survey_number": "100/1",
+        "area_hectares": 1.5,
+        "land_type": "Agricultural",
+    }).json()
+
+    case_a = client.post("/api/cases", json={
+        "citizen_id": user_a_id,
+        "land_id": land_a["land_id"],
+        "category": "compensation_not_received",
+        "description": "Compensation pending for 10 months.",
+    }, headers={"Authorization": f"Bearer {token_a}"}).json()
+
+    # Citizen B tries to access Citizen A's lands -> 403
+    lands_b_attempt = client.get(
+        f"/api/users/{user_a_id}/lands",
+        headers={"Authorization": f"Bearer {token_b}"}
+    )
+    assert lands_b_attempt.status_code == 403
+
+    # Citizen B tries to access Citizen A's cases -> 403
+    cases_b_attempt = client.get(
+        f"/api/users/{user_a_id}/cases",
+        headers={"Authorization": f"Bearer {token_b}"}
+    )
+    assert cases_b_attempt.status_code == 403
+
+    # Citizen B tries to view Citizen A's case directly -> 403
+    case_b_view = client.get(
+        f"/api/cases/{case_a['case_id']}",
+        headers={"Authorization": f"Bearer {token_b}"}
+    )
+    assert case_b_view.status_code == 403
+
+    # Citizen A can access their own cases -> 200
+    case_a_view = client.get(
+        f"/api/cases/{case_a['case_id']}",
+        headers={"Authorization": f"Bearer {token_a}"}
+    )
+    assert case_a_view.status_code == 200
+
+
+def test_officer_can_access_cases():
+    # Setup Citizen with case
+    cit = client.post("/api/auth/register", json={
+        "name": "Farmer",
+        "email": "farmer@example.com",
+        "role": "citizen",
+        "password": "Password@123"
+    }).json()
+    cit_token = cit["access_token"]
+    cit_id = cit["user"]["user_id"]
+
+    land = client.post("/api/lands", json={
+        "owner_id": cit_id,
+        "state": "Maharashtra",
+        "district": "Pune",
+        "taluka": "Haveli",
+        "village": "Wagholi",
+        "survey_number": "200/1",
+        "area_hectares": 2.0,
+        "land_type": "Agricultural",
+    }).json()
+
+    case = client.post("/api/cases", json={
+        "citizen_id": cit_id,
+        "land_id": land["land_id"],
+        "category": "land_measurement",
+        "description": "Boundary issue.",
+    }, headers={"Authorization": f"Bearer {cit_token}"}).json()
+
+    # Officer registers
+    off = client.post("/api/auth/register", json={
+        "name": "Officer Pawar",
+        "email": "pawar@gov.in",
+        "role": "officer",
+        "password": "PawarPassword@123",
+        "officer_key": OFFICER_REGISTRATION_KEY,
+    }).json()
+    off_token = off["access_token"]
+
+    # Officer accesses citizen case -> 200
+    officer_view = client.get(
+        f"/api/cases/{case['case_id']}",
+        headers={"Authorization": f"Bearer {off_token}"}
+    )
+    assert officer_view.status_code == 200
+    assert officer_view.json()["case_id"] == case["case_id"]

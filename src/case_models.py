@@ -103,12 +103,25 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     user_id: Optional[str] = None
+    password: Optional[str] = Field(default=None, min_length=6)
+    officer_key: Optional[str] = None
 
 
 class UserResponse(UserBase):
     user_id: str
     created_at: datetime
     updated_at: datetime
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
 
 
 # ============================================================
