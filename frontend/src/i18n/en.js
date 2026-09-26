@@ -168,9 +168,10 @@ export default {
     "labelPossessionPending": "Possession Pending",
     "sectionC": "Section C • Documentation",
     "keyModelDriver": "Key Model Driver",
-    "labelDocsReq": "Docs Required",
-    "labelDocsPending": "Docs Pending",
+    "labelDocsReq": "Documents Required",
+    "labelDocsPending": "Documents Pending",
     "labelDocCompletion": "Documentation Completion",
+    "adjustDocsPending": "Adjust pending documents",
     "sectionD": "Section D • Compensation",
     "escrowTranche": "Escrow Tranche",
     "labelCompCases": "Pending Cases",
@@ -394,7 +395,9 @@ export default {
     "languageToggle": "Language",
     "explain": "Explain",
     "clickForDetails": "Click ⓘ for detailed explanation",
-    "infoFooterNote": "Bhoomi Sakha Institutional Guidance"
+    "infoFooterNote": "Bhoomi Sakha Institutional Guidance",
+    "min": "Min",
+    "max": "Max"
   },
   "infoCategories": {
     "input_feature": "Input Feature",
@@ -729,12 +732,12 @@ export default {
     },
     "documents_pending": {
       "title": "Documents Pending",
-      "short": "Count of document dossiers still incomplete, unverified, or missing revenue mutation.",
-      "whatItMeans": "Claimant dossiers lacking clear lineage, revenue trace, or bank verification.",
-      "whyItMatters": "Primary cause of compensation disbursement bottlenecks and audit inquiries.",
-      "howToInterpret": "A high pending count (>50%) is heavily weighted as a delay risk driver in model tree splits.",
-      "example": "232 documents pending verification out of 241.",
-      "modelUsage": "Integer input feature serving as primary tree split node."
+      "short": "Count of required statutory document dossiers still pending verification.",
+      "whatItMeans": "Represents the number of required land and title documents that remain pending verification. Changing this value directly updates Documentation Completion (((Required - Pending) / Required) * 100).",
+      "whyItMatters": "Pending documents are a primary driver of land acquisition delay, directly stalling Section 19 declaration and compensation award disbursement.",
+      "howToInterpret": "Lower pending document counts directly increase Documentation Completion toward 100% and reduce predicted delay risk. High pending counts trigger higher model delay probabilities.",
+      "example": "If 850 documents are required and 399 are pending, Documentation Completion is 53.1%.",
+      "modelUsage": "Primary project telemetry input feature directly feeding XGBoost decision trees to calculate delay risk."
     },
     "documentation_completion_pct": {
       "title": "Documentation Completion (%)",

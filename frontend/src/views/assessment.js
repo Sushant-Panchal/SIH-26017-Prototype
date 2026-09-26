@@ -265,33 +265,74 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
                 <span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-[10px] font-semibold">${t('assessment.keyModelDriver', 'Key Model Driver')}</span>
               </div>
               <div class="grid grid-cols-2 gap-space-sm">
+                <!-- Documents Required -->
                 <div class="flex flex-col">
                   <div class="flex items-center justify-between mb-1">
-                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium">${t('assessment.labelDocsReq', 'Docs Required')}</label>
+                    <label class="font-label-sm text-label-sm text-on-surface-variant font-medium" for="field_docsReq">${t('assessment.labelDocsReq', 'Documents Required')}</label>
                     ${renderInfoButton('documents_required')}
                   </div>
-                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_docsReq" min="1" type="number"/>
+                  <input class="bg-surface-container-low px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface focus:outline-none border border-outline-variant/40" id="field_docsReq" min="0" step="1" type="number"/>
                 </div>
+
+                <!-- Documents Pending (Numeric Input) -->
                 <div class="flex flex-col">
                   <div class="flex items-center justify-between mb-1">
-                    <label class="font-label-sm text-label-sm text-secondary font-semibold flex items-center gap-1">
-                      <span>${t('assessment.labelDocsPending', 'Docs Pending')}</span>
+                    <label class="font-label-sm text-label-sm text-secondary font-semibold flex items-center gap-1" for="field_docsPending">
+                      <span>${t('assessment.labelDocsPending', 'Documents Pending')}</span>
                       <span class="material-symbols-outlined text-[13px]">edit</span>
                     </label>
                     ${renderInfoButton('documents_pending')}
                   </div>
-                  <input class="bg-surface-container-high px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface font-bold focus:outline-none focus:ring-2 focus:ring-secondary-container border border-outline-variant/50" id="field_docsPending" min="0" type="number"/>
+                  <input class="bg-surface-container-high px-space-sm py-1.5 rounded font-tabular-data text-label-md text-on-surface font-bold focus:outline-none focus:ring-2 focus:ring-secondary-container border border-outline-variant/50" id="field_docsPending" min="0" step="1" type="number"/>
                 </div>
-                <div class="col-span-2 flex flex-col gap-1 pt-1">
+
+                <!-- Dual Range Slider Control for Docs Pending -->
+                <div class="col-span-2 flex flex-col gap-1.5 pt-1.5">
+                  <div class="flex items-center justify-between font-label-sm text-xs">
+                    <label class="text-on-surface-variant font-medium flex items-center gap-1.5 cursor-pointer" for="slider_docsPending">
+                      <span class="material-symbols-outlined text-[16px] text-secondary">tune</span>
+                      <span>${t('assessment.adjustDocsPending', 'Adjust pending documents')}</span>
+                    </label>
+                    <span class="font-tabular-data font-bold text-on-surface text-xs px-2 py-0.5 rounded bg-surface-container-high" id="sliderDocsPendingDisplay">-- / --</span>
+                  </div>
+                  <div class="relative flex items-center w-full py-0.5">
+                    <input 
+                      type="range" 
+                      id="slider_docsPending" 
+                      class="w-full h-2.5 bg-surface-container-high rounded-lg appearance-none cursor-pointer accent-secondary focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:ring-offset-1 focus:ring-offset-surface-container-lowest transition-all"
+                      min="0" 
+                      max="100" 
+                      value="0" 
+                      step="1"
+                      aria-label="${t('assessment.adjustDocsPending', 'Adjust pending documents')}"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="0"
+                    />
+                  </div>
+                  <div class="flex justify-between font-tabular-data text-[11px] text-on-surface-variant font-semibold px-0.5">
+                    <span class="flex items-center gap-0.5">
+                      <span>0</span>
+                      <span class="text-[9px] uppercase text-on-surface-variant/70 font-normal">(${t('common.min', 'Min')})</span>
+                    </span>
+                    <span class="flex items-center gap-0.5">
+                      <span id="sliderMaxLabel">--</span>
+                      <span class="text-[9px] uppercase text-on-surface-variant/70 font-normal">(${t('common.max', 'Max')})</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Documentation Completion Bar -->
+                <div class="col-span-2 flex flex-col gap-1 pt-1.5 border-t border-surface-container-high/60">
                   <div class="flex items-center justify-between font-label-sm text-label-sm">
                     <div class="flex items-center gap-1">
-                      <span class="text-on-surface-variant">${t('assessment.labelDocCompletion', 'Documentation Completion')}</span>
+                      <span class="text-on-surface-variant font-medium">${t('assessment.labelDocCompletion', 'Documentation Completion')}</span>
                       ${renderInfoButton('documentation_completion_pct')}
                     </div>
-                    <span class="font-tabular-data font-semibold text-on-surface" id="label_docCompletion">--%</span>
+                    <span class="font-tabular-data font-bold text-on-surface" id="label_docCompletion">--%</span>
                   </div>
-                  <div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden">
-                    <div class="bg-secondary-container h-full transition-all duration-300" id="bar_docCompletion" style="width: 0%;"></div>
+                  <div class="w-full bg-surface-container-high rounded-full h-2.5 overflow-hidden">
+                    <div class="bg-secondary-container h-full transition-all duration-200 rounded-full" id="bar_docCompletion" style="width: 0%;"></div>
                   </div>
                 </div>
               </div>
@@ -799,14 +840,36 @@ function attachAssessmentEvents(container, initialData) {
     });
   });
 
-  // Docs Pending live recalculation
+  // Docs Pending & Docs Required dual-control live synchronization
   const docsPendingInput = container.querySelector('#field_docsPending');
+  const docsPendingSlider = container.querySelector('#slider_docsPending');
   const docsReqInput = container.querySelector('#field_docsReq');
-  if (docsPendingInput) {
-    docsPendingInput.addEventListener('input', calculateDocCompletion);
+
+  if (docsPendingSlider) {
+    docsPendingSlider.addEventListener('input', () => syncDocsPending('slider'));
+    docsPendingSlider.addEventListener('change', () => syncDocsPending('slider'));
   }
+
+  if (docsPendingInput) {
+    docsPendingInput.addEventListener('input', () => syncDocsPending('numeric'));
+    docsPendingInput.addEventListener('change', () => syncDocsPending('numeric'));
+    docsPendingInput.addEventListener('blur', () => {
+      if (docsPendingInput.value.trim() === '') {
+        docsPendingInput.value = '0';
+        syncDocsPending('numeric');
+      }
+    });
+  }
+
   if (docsReqInput) {
-    docsReqInput.addEventListener('input', calculateDocCompletion);
+    docsReqInput.addEventListener('input', () => syncDocsPending('req'));
+    docsReqInput.addEventListener('change', () => syncDocsPending('req'));
+    docsReqInput.addEventListener('blur', () => {
+      if (docsReqInput.value.trim() === '') {
+        docsReqInput.value = '0';
+        syncDocsPending('req');
+      }
+    });
   }
 
   // Assess Project Risk button
@@ -848,15 +911,114 @@ function attachAssessmentEvents(container, initialData) {
   triggerAssessment(container);
 }
 
-function calculateDocCompletion() {
-  const req = parseFloat(document.getElementById('field_docsReq')?.value) || 1;
-  const pending = parseFloat(document.getElementById('field_docsPending')?.value) || 0;
-  const pct = Math.max(0, Math.min(100, (((req - pending) / req) * 100))).toFixed(1);
-
+function syncDocsPending(source = 'none') {
+  const reqInput = document.getElementById('field_docsReq');
+  const pendingInput = document.getElementById('field_docsPending');
+  const slider = document.getElementById('slider_docsPending');
+  const sliderMaxLabel = document.getElementById('sliderMaxLabel');
+  const sliderDisplay = document.getElementById('sliderDocsPendingDisplay');
   const label = document.getElementById('label_docCompletion');
   const bar = document.getElementById('bar_docCompletion');
-  if (label) label.textContent = `${pct}%`;
-  if (bar) bar.style.width = `${pct}%`;
+
+  if (!reqInput || !pendingInput) return;
+
+  // 1. Parse Docs Required (non-negative integer)
+  const rawReqStr = reqInput.value !== undefined ? String(reqInput.value).trim() : '';
+  let req = rawReqStr === '' ? 0 : parseInt(rawReqStr, 10);
+  if (isNaN(req) || req < 0) req = 0;
+  if (rawReqStr !== '' && (parseFloat(rawReqStr) !== req || req < 0)) {
+    reqInput.value = req;
+  }
+
+  // 2. Parse Docs Pending according to source
+  let pending = 0;
+  if (source === 'slider') {
+    const rawSliderVal = slider ? parseInt(slider.value, 10) : 0;
+    pending = isNaN(rawSliderVal) ? 0 : rawSliderVal;
+    if (pending < 0) pending = 0;
+    if (pending > req) pending = req;
+    pendingInput.value = pending;
+  } else if (source === 'numeric') {
+    const rawPendingStr = pendingInput.value !== undefined ? String(pendingInput.value).trim() : '';
+    if (rawPendingStr === '') {
+      pending = 0;
+    } else {
+      pending = parseInt(rawPendingStr, 10);
+      if (isNaN(pending)) pending = 0;
+    }
+    // Clamping within [0, req]
+    if (pending < 0) {
+      pending = 0;
+      pendingInput.value = 0;
+    } else if (pending > req) {
+      pending = req;
+      pendingInput.value = req;
+    } else if (rawPendingStr !== '' && parseFloat(rawPendingStr) !== pending) {
+      pendingInput.value = pending;
+    }
+  } else {
+    // Initial / Preset / Programmatic / Req change
+    const rawPendingStr = pendingInput.value !== undefined ? String(pendingInput.value).trim() : '';
+    if (rawPendingStr === '') {
+      pending = 0;
+    } else {
+      pending = parseInt(rawPendingStr, 10);
+      if (isNaN(pending)) pending = 0;
+    }
+    if (pending < 0) {
+      pending = 0;
+      pendingInput.value = 0;
+    } else if (pending > req) {
+      pending = req;
+      pendingInput.value = req;
+    }
+  }
+
+  // 3. Update Slider
+  if (slider) {
+    slider.min = '0';
+    slider.max = String(req);
+    slider.value = String(pending);
+    slider.setAttribute('aria-valuemin', '0');
+    slider.setAttribute('aria-valuemax', String(req));
+    slider.setAttribute('aria-valuenow', String(pending));
+  }
+
+  // 4. Update Slider Labels
+  if (sliderMaxLabel) {
+    sliderMaxLabel.textContent = req;
+  }
+  if (sliderDisplay) {
+    sliderDisplay.textContent = `${pending} / ${req}`;
+  }
+
+  // 5. Calculate Documentation Completion Percentage
+  // Formula: ((Docs Required - Docs Pending) / Docs Required) * 100
+  // Edge Case: If Docs Required = 0, completion is 0% (avoid NaN / Infinity)
+  let pctStr = '0%';
+  let pctNum = 0;
+  if (req > 0) {
+    const rawPct = ((req - pending) / req) * 100;
+    pctNum = Math.max(0, Math.min(100, rawPct));
+    if (pctNum === 0) {
+      pctStr = '0%';
+    } else if (pctNum === 100) {
+      pctStr = '100%';
+    } else {
+      pctStr = `${pctNum.toFixed(1)}%`;
+    }
+  }
+
+  if (label) {
+    label.textContent = pctStr;
+  }
+  if (bar) {
+    bar.style.width = `${pctNum}%`;
+  }
+}
+
+function calculateDocCompletion() {
+  syncDocsPending('none');
 }
 
 function populateForm(values) {
