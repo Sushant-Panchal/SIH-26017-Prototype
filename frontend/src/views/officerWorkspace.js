@@ -9,6 +9,7 @@ import { caseService } from '../api/cases.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { renderAuthGateway } from '../components/authModal.js';
 
 const VALID_STATUS_TRANSITIONS = {
   submitted: ['received', 'assigned', 'under_review', 'rejected'],
@@ -30,11 +31,16 @@ export async function renderOfficerWorkspaceView(container) {
   const urlParams = new URLSearchParams(queryString);
   const caseId = urlParams.get('id');
 
-  const officer = authService.getStoredUser() || {
-    user_id: 'USR-OFFICER-01',
-    name: 'Dr. Sunita Deshmukh',
-    role: 'officer',
-  };
+  const officer = authService.getStoredUser();
+  if (!officer || (officer.role !== 'officer' && officer.role !== 'super_admin')) {
+    renderAuthGateway(container, {
+      role: 'officer',
+      title: t('auth.officerWorkspaceGatewayTitle', 'Revenue Officer Sign In Required'),
+      message: t('auth.officerWorkspaceGatewayMsg', 'Official authorization is required to access confidential dossiers, verify documents, and issue statutory case determinations.'),
+      onLoginSuccess: () => renderOfficerWorkspaceView(container),
+    });
+    return;
+  }
 
   if (!caseId) {
     container.innerHTML = `
@@ -680,7 +686,7 @@ function openAssignModal(caseData, officer, container, onComplete) {
         <form id="assignForm" class="space-y-3.5 text-xs">
           <div>
             <label class="block font-semibold text-on-surface mb-1">Target Officer ID *</label>
-            <input type="text" id="targetOfficerId" required value="${caseData.assigned_officer_id || officer.user_id}" placeholder="e.g. USR-OFFICER-01" class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-tabular-data" />
+            <input type="text" id="targetOfficerId" required value="${caseData.assigned_officer_id || officer.user_id}" placeholder="e.g. USR-..." class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-tabular-data" />
           </div>
 
           <div>

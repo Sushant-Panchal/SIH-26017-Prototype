@@ -7,13 +7,19 @@ import { caseService } from '../api/cases.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { renderAuthGateway } from '../components/authModal.js';
 
 export async function renderOfficerCasesView(container) {
-  let user = authService.getStoredUser() || {
-    user_id: 'USR-OFFICER-01',
-    name: 'Dr. Sunita Deshmukh',
-    role: 'officer',
-  };
+  const user = authService.getStoredUser();
+  if (!user || (user.role !== 'officer' && user.role !== 'super_admin')) {
+    renderAuthGateway(container, {
+      role: 'officer',
+      title: t('auth.officerGatewayTitle', 'Revenue Officer Sign In Required'),
+      message: t('auth.officerGatewayMsg', 'Official administrative credentials required to inspect citizen grievance dossiers, verify revenue documents, and manage statutory case queues.'),
+      onLoginSuccess: () => renderOfficerCasesView(container),
+    });
+    return;
+  }
 
   container.innerHTML = `
     <div class="space-y-6 max-w-7xl mx-auto pb-12 animate-fade-in">

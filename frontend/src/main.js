@@ -16,6 +16,7 @@ import { renderCitizenCaseTrackingView } from './views/citizenCaseTracking.js';
 import { renderOfficerCasesView } from './views/officerCases.js';
 import { renderOfficerWorkspaceView } from './views/officerWorkspace.js';
 import { authService } from './api/auth.js';
+import { openAuthModal } from './components/authModal.js';
 import { predictionService } from './api/prediction.js';
 import { notificationStore } from './utils/notifications.js';
 import { themeManager } from './utils/theme.js';
@@ -40,6 +41,7 @@ class BhoomiSakhaApp {
     this.setupPortalSwitcher();
     this.setupNavigation();
     this.setupMobileMenu();
+    this.setupUserSession();
     this.updateLanguageUI();
     this.setupClock();
     this.setupNotificationBell();
@@ -336,12 +338,8 @@ class BhoomiSakhaApp {
     const brandHeaderSubtitle = document.getElementById('brandHeaderSubtitle');
     if (brandHeaderSubtitle) brandHeaderSubtitle.textContent = subtitle;
 
-    // 5. Officer Persona
-    const officerName = document.getElementById('officerName');
-    if (officerName) officerName.textContent = t('header.officerName', 'Dr. R. K. Sharma');
-
-    const officerRole = document.getElementById('officerRole');
-    if (officerRole) officerRole.textContent = t('header.officerRole', 'IAS, Land Commissioner');
+    // 5. User Session & Persona
+    this.updateUserSessionUI();
 
     // 6. Secondary ribbon
     const statutoryCutoffLabel = document.getElementById('statutoryCutoffLabel');
@@ -399,6 +397,129 @@ class BhoomiSakhaApp {
     }
   }
 
+  setupUserSession() {
+    this.updateUserSessionUI();
+    authService.onAuthChange((user) => {
+      this.updateUserSessionUI();
+      if (user && (user.role === 'officer' || user.role === 'super_admin') && this.currentPortal !== 'officer') {
+        this.setPortalMode('officer', false);
+      } else if (user && user.role === 'citizen' && this.currentPortal !== 'citizen') {
+        this.setPortalMode('citizen', false);
+      }
+      this.handleRouting();
+    });
+  }
+
+  updateUserSessionUI() {
+    const userContainer = document.getElementById('headerUserContainer');
+    if (!userContainer) return;
+
+    const user = authService.getStoredUser();
+
+    if (!user) {
+      userContainer.innerHTML = `
+        <button id="headerSignInBtn" type="button" class="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-xs font-semibold flex items-center gap-1.5 shadow-sm hover:opacity-95 transition-all focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Sign In or Register">
+          <span class="material-symbols-outlined text-[16px]">lock_open</span>
+          <span>${t('auth.signInBtn', 'Sign In / Register')}</span>
+        </button>
+      `;
+
+      const signInBtn = document.getElementById('headerSignInBtn');
+      if (signInBtn) {
+        signInBtn.addEventListener('click', () => {
+          openAuthModal({
+            role: this.currentPortal,
+            onSuccess: (authUser) => {
+              this.showToast(`Signed in as ${authUser.name} (${authUser.role})`, 'success');
+              if (authUser.role === 'citizen' && this.currentPortal !== 'citizen') {
+                this.setPortalMode('citizen', true);
+              } else if (authUser.role === 'officer' && this.currentPortal !== 'officer') {
+                this.setPortalMode('officer', true);
+              } else {
+                this.handleRouting();
+              }
+            },
+          });
+        });
+      }
+      return;
+    }
+
+    // Authenticated user
+    const initials = (user.name || user.email || 'U')
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+
+    const roleLabel = (user.role === 'officer' || user.role === 'super_admin')
+      ? (user.designation || 'Revenue Officer')
+      : 'Citizen / Landowner';
+
+    userContainer.innerHTML = `
+      <div class="relative" id="userMenuContainer">
+        <button id="userProfileBtn" type="button" class="flex items-center gap-2 p-1 rounded-lg hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-primary" aria-label="User account menu" aria-haspopup="true" aria-expanded="false">
+          <div class="flex flex-col text-right hidden lg:flex">
+            <span class="font-label-md text-xs text-on-surface font-semibold truncate max-w-[150px]">${user.name}</span>
+            <span class="font-label-sm text-[11px] text-on-surface-variant font-medium">${roleLabel}</span>
+          </div>
+          <div class="w-8 h-8 rounded-full ${user.role === 'officer' ? 'bg-primary-container text-on-primary' : 'bg-primary text-on-primary'} flex items-center justify-center font-bold text-xs ring-1 ring-outline-variant/60 shadow-xs" title="${user.name} (${user.email})">
+            ${initials}
+          </div>
+        </button>
+        <div id="userProfileDropdown" class="hidden absolute right-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-xl py-2 z-50 text-xs text-on-surface animate-fade-in">
+          <div class="px-3.5 py-2 border-b border-outline-variant/30">
+            <div class="font-bold truncate text-on-surface">${user.name}</div>
+            <div class="text-[11px] text-on-surface-variant truncate font-tabular-data">${user.email}</div>
+            <div class="text-[10px] text-primary font-semibold mt-1 uppercase font-tabular-data">ID: ${user.user_id}</div>
+          </div>
+          <div class="p-1">
+            <button id="headerSignOutBtn" type="button" class="w-full px-3 py-2 text-left rounded-lg text-error hover:bg-error/10 flex items-center gap-2 transition-colors font-medium">
+              <span class="material-symbols-outlined text-[16px]">logout</span>
+              <span>${t('auth.signOutBtn', 'Sign Out')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const userProfileBtn = document.getElementById('userProfileBtn');
+    const userProfileDropdown = document.getElementById('userProfileDropdown');
+    const signOutBtn = document.getElementById('headerSignOutBtn');
+
+    if (userProfileBtn && userProfileDropdown) {
+      userProfileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !userProfileDropdown.classList.contains('hidden');
+        if (isOpen) {
+          userProfileDropdown.classList.add('hidden');
+          userProfileBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          userProfileDropdown.classList.remove('hidden');
+          userProfileBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!userProfileBtn.contains(e.target) && !userProfileDropdown.contains(e.target)) {
+          userProfileDropdown.classList.add('hidden');
+          userProfileBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    if (signOutBtn) {
+      signOutBtn.addEventListener('click', async () => {
+        await authService.logout();
+        this.showToast(t('auth.signedOutToast', 'Signed out successfully.'), 'info');
+        this.updateUserSessionUI();
+        this.handleRouting();
+      });
+    }
+  }
+
   setupPortalSwitcher() {
     const officerBtn = document.getElementById('switchToOfficerBtn');
     const citizenBtn = document.getElementById('switchToCitizenBtn');
@@ -437,21 +558,15 @@ class BhoomiSakhaApp {
       }
     }
 
-    // Update Persona in header
-    const officerName = document.getElementById('officerName');
-    const officerRole = document.getElementById('officerRole');
+    // Update Breadcrumb
     const breadcrumbRoot = document.getElementById('breadcrumbRoot');
-
-    if (mode === 'officer') {
-      if (officerName) officerName.textContent = t('header.officerName', 'Dr. Sunita Deshmukh');
-      if (officerRole) officerRole.textContent = t('header.officerRole', 'IAS, Land Commissioner');
-      if (breadcrumbRoot) breadcrumbRoot.textContent = t('header.commandCenter', 'Command Center');
-    } else {
-      if (officerName) officerName.textContent = 'Rameshwar Patil';
-      if (officerRole) officerRole.textContent = 'Citizen / Landowner';
-      if (breadcrumbRoot) breadcrumbRoot.textContent = 'Citizen Portal';
+    if (breadcrumbRoot) {
+      breadcrumbRoot.textContent = mode === 'officer' 
+        ? t('header.commandCenter', 'Command Center') 
+        : t('citizen.portalTitle', 'Citizen Portal');
     }
 
+    this.updateUserSessionUI();
     this.renderPortalNavigation();
 
     if (navigate) {

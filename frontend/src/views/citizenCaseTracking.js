@@ -8,18 +8,22 @@ import { caseService } from '../api/cases.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { renderAuthGateway } from '../components/authModal.js';
 
 export async function renderCitizenCaseTrackingView(container) {
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const activeCaseId = urlParams.get('id');
 
-  let user = authService.getStoredUser() || {
-    user_id: 'USR-CITIZEN-01',
-    name: 'Ramesh Patil',
-    email: 'ramesh.patil@example.com',
-    role: 'citizen',
-    district: 'Pune',
-  };
+  const user = authService.getStoredUser();
+  if (!user || user.role !== 'citizen') {
+    renderAuthGateway(container, {
+      role: 'citizen',
+      title: t('auth.citizenTrackingGatewayTitle', 'Sign In to Track Acquisition Grievances'),
+      message: t('auth.citizenTrackingGatewayMsg', 'Access real-time case progression, respond to officer document requests, and review verified status updates under your account.'),
+      onLoginSuccess: () => renderCitizenCaseTrackingView(container),
+    });
+    return;
+  }
 
   container.innerHTML = `
     <div class="space-y-6 max-w-7xl mx-auto pb-12 animate-fade-in">
@@ -379,13 +383,17 @@ function renderCitizenDocumentUploadCard(caseId) {
     btn.disabled = true;
     btn.textContent = 'Uploading...';
 
-    const user = authService.getStoredUser() || { user_id: 'USR-CITIZEN-01' };
+    const activeUser = authService.getStoredUser();
+    if (!activeUser) {
+      alert('Authentication required to upload documents.');
+      return;
+    }
     const fileName = document.getElementById('respFileName').value.trim();
     const docType = document.getElementById('respDocType').value;
 
     try {
       await caseService.createCaseDocument(caseId, {
-        uploaded_by: user.user_id,
+        uploaded_by: activeUser.user_id,
         document_type: docType,
         file_name: fileName,
         storage_reference: `storage/cases/${caseId}/${fileName}`,

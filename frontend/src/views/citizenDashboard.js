@@ -8,18 +8,18 @@ import { caseService } from '../api/cases.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { renderAuthGateway } from '../components/authModal.js';
 
 export async function renderCitizenDashboardView(container) {
-  // Ensure default demo citizen user if none stored
-  let user = authService.getStoredUser();
+  const user = authService.getStoredUser();
   if (!user || user.role !== 'citizen') {
-    user = {
-      user_id: 'USR-CITIZEN-01',
-      name: 'Ramesh Patil',
-      email: 'ramesh.patil@example.com',
+    renderAuthGateway(container, {
       role: 'citizen',
-      district: 'Pune',
-    };
+      title: t('auth.citizenGatewayTitle', 'Citizen Portal Sign In Required'),
+      message: t('auth.citizenGatewayMsg', 'Please sign in or register your citizen account to manage your land holdings, check predictive delay risks, and view your grievance status.'),
+      onLoginSuccess: () => renderCitizenDashboardView(container),
+    });
+    return;
   }
 
   container.innerHTML = `

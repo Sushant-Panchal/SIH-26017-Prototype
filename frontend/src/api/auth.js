@@ -8,6 +8,8 @@ import { apiClient } from './client.js';
 const TOKEN_KEY = 'bs_token';
 const USER_KEY = 'bs_user';
 
+let authListeners = [];
+
 export const authService = {
   /**
    * Log in with email and password
@@ -17,6 +19,7 @@ export const authService = {
     if (data.access_token) {
       localStorage.setItem(TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      this.notifyAuthChange(data.user);
     }
     return data;
   },
@@ -29,6 +32,7 @@ export const authService = {
     if (data.access_token) {
       localStorage.setItem(TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      this.notifyAuthChange(data.user);
     }
     return data;
   },
@@ -40,8 +44,12 @@ export const authService = {
     try {
       const user = await apiClient.get('/api/auth/me');
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      this.notifyAuthChange(user);
       return user;
     } catch (err) {
+      if (err.status === 401) {
+        this.logout();
+      }
       return null;
     }
   },
@@ -57,6 +65,7 @@ export const authService = {
     } finally {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+      this.notifyAuthChange(null);
     }
   },
 
@@ -81,10 +90,24 @@ export const authService = {
   },
 
   /**
+   * Return the current authenticated user's ID or null
+   */
+  getCurrentUserId() {
+    return this.getStoredUser()?.user_id || null;
+  },
+
+  /**
+   * Return the current authenticated user's role or null
+   */
+  getCurrentUserRole() {
+    return this.getStoredUser()?.role || null;
+  },
+
+  /**
    * Check if user is currently logged in
    */
   isAuthenticated() {
-    return Boolean(this.getStoredToken());
+    return Boolean(this.getStoredToken() && this.getStoredUser());
   },
 
   /**
@@ -104,4 +127,30 @@ export const authService = {
     const user = this.getStoredUser();
     return user && user.role === 'citizen';
   },
+
+  /**
+   * Subscribe to authentication state changes
+   */
+  onAuthChange(callback) {
+    authListeners.push(callback);
+    return () => {
+      authListeners = authListeners.filter(cb => cb !== callback);
+    };
+  },
+
+  notifyAuthChange(user) {
+    authListeners.forEach(cb => {
+      try {
+        cb(user);
+      } catch (err) {
+        console.warn('Error in auth change listener:', err);
+      }
+    });
+  },
 };
+
+// Convenience direct exports
+export const getCurrentUser = () => authService.getStoredUser();
+export const getCurrentUserId = () => authService.getCurrentUserId();
+export const getCurrentUserRole = () => authService.getCurrentUserRole();
+export const isAuthenticated = () => authService.isAuthenticated();

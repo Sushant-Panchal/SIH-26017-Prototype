@@ -265,8 +265,16 @@ async def get_user(user_id: str):
 # ============================================================
 
 @router.post("/lands", response_model=LandResponse, status_code=201)
-async def create_land(payload: LandCreate):
+async def create_land(payload: LandCreate, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
+    # Authorization Check: Citizen cannot register land under another citizen's ID
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if payload.owner_id != auth_user.get("user_id"):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You cannot register land under another citizen's identity.",
+            )
+
     # Verify owner exists
     await get_user_or_404(payload.owner_id, db=db)
 
@@ -288,12 +296,15 @@ async def create_land(payload: LandCreate):
 
 
 @router.get("/lands/{land_id}", response_model=LandResponse)
-async def get_land(land_id: str):
+async def get_land(land_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     lands = db.get_collection("lands")
     land = await lands.find_one({"land_id": land_id})
     if not land:
         raise HTTPException(status_code=404, detail=f"Land record '{land_id}' not found.")
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if land.get("owner_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot access another citizen's land record.")
     return LandResponse(**sanitize_doc(land))
 
 
@@ -774,9 +785,17 @@ async def get_case_events(case_id: str, auth_user: Optional[dict] = Depends(get_
 # ============================================================
 
 @router.post("/cases/{case_id}/documents", response_model=CaseDocumentResponse, status_code=201)
-async def create_case_document(case_id: str, payload: CaseDocumentCreate):
+async def create_case_document(case_id: str, payload: CaseDocumentCreate, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     case = await get_case_or_404(case_id, db=db)
+
+    # Authorization Check: Citizen can only upload to their own case and cannot impersonate
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot upload documents to another citizen's case.")
+        if payload.uploaded_by != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot upload documents under another citizen's identity.")
+
     await get_user_or_404(payload.uploaded_by, db=db)
 
     doc_id = generate_prefixed_id("DOC")
@@ -815,9 +834,12 @@ async def create_case_document(case_id: str, payload: CaseDocumentCreate):
 
 
 @router.get("/cases/{case_id}/documents", response_model=List[CaseDocumentResponse])
-async def get_case_documents(case_id: str):
+async def get_case_documents(case_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
-    await get_case_or_404(case_id, db=db)
+    case = await get_case_or_404(case_id, db=db)
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if case.get("citizen_id") != auth_user.get("user_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: Citizens can only access documents for their own cases.")
     case_docs = db.get_collection("case_documents")
     cursor = case_docs.find({"case_id": case_id}).sort("uploaded_at", -1)
     results = await cursor.to_list(100)
@@ -903,12 +925,19 @@ async def get_user_notifications(user_id: str, auth_user: Optional[dict] = Depen
 
 
 @router.post("/notifications/{notification_id}/read", response_model=NotificationResponse)
-async def mark_notification_read(notification_id: str):
+async def mark_notification_read(notification_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
     db = get_database()
     notifs = db.get_collection("notifications")
     notif = await notifs.find_one({"notification_id": notification_id})
     if not notif:
         raise HTTPException(status_code=404, detail=f"Notification '{notification_id}' not found.")
+
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        if notif.get("user_id") != auth_user.get("user_id"):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You cannot mark another citizen's notification as read.",
+            )
 
     now = now_utc()
     await notifs.update_one(

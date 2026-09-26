@@ -14,11 +14,8 @@ export async function renderCitizenRiskView(container) {
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const preselectedLandId = urlParams.get('land_id');
 
-  let user = authService.getStoredUser() || {
-    user_id: 'USR-CITIZEN-01',
-    name: 'Ramesh Patil',
-    role: 'citizen',
-  };
+  const user = authService.getStoredUser();
+  const userId = user?.user_id || null;
 
   container.innerHTML = `
     <div class="space-y-6 max-w-7xl mx-auto pb-12 animate-fade-in">
@@ -211,8 +208,10 @@ export async function renderCitizenRiskView(container) {
 
   attachInfoTooltips(container);
 
-  // Populate lands dropdown
-  loadCitizenLandsDropdown(user.user_id, preselectedLandId);
+  // Populate lands dropdown if user is authenticated
+  if (userId) {
+    loadCitizenLandsDropdown(userId, preselectedLandId);
+  }
 
   // Handle Risk calculation form submission
   const form = document.getElementById('citizenRiskForm');

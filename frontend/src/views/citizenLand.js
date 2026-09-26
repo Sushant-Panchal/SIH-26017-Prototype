@@ -8,15 +8,19 @@ import { caseService } from '../api/cases.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { renderAuthGateway } from '../components/authModal.js';
 
 export async function renderCitizenLandView(container) {
-  let user = authService.getStoredUser() || {
-    user_id: 'USR-CITIZEN-01',
-    name: 'Ramesh Patil',
-    email: 'ramesh.patil@example.com',
-    role: 'citizen',
-    district: 'Pune',
-  };
+  const user = authService.getStoredUser();
+  if (!user || user.role !== 'citizen') {
+    renderAuthGateway(container, {
+      role: 'citizen',
+      title: t('auth.citizenLandGatewayTitle', 'Sign In to Access Your Land Holdings'),
+      message: t('auth.citizenLandGatewayMsg', 'Access cadastral parcels, view compensation records, and register survey numbers under your verified account.'),
+      onLoginSuccess: () => renderCitizenLandView(container),
+    });
+    return;
+  }
 
   container.innerHTML = `
     <div class="space-y-6 max-w-7xl mx-auto pb-12 animate-fade-in">

@@ -264,3 +264,163 @@ def test_officer_can_access_cases():
     )
     assert officer_view.status_code == 200
     assert officer_view.json()["case_id"] == case["case_id"]
+
+
+def test_citizen_cannot_access_other_citizen_land_or_impersonate():
+    # Citizen A
+    resp_a = client.post("/api/auth/register", json={
+        "name": "Citizen A",
+        "email": "cit.a@example.com",
+        "role": "citizen",
+        "password": "PasswordA@123"
+    }).json()
+    token_a = resp_a["access_token"]
+    user_a_id = resp_a["user"]["user_id"]
+
+    # Citizen B
+    resp_b = client.post("/api/auth/register", json={
+        "name": "Citizen B",
+        "email": "cit.b@example.com",
+        "role": "citizen",
+        "password": "PasswordB@123"
+    }).json()
+    token_b = resp_b["access_token"]
+    user_b_id = resp_b["user"]["user_id"]
+
+    # Citizen A adds land
+    land_a = client.post("/api/lands", json={
+        "owner_id": user_a_id,
+        "state": "Maharashtra",
+        "district": "Pune",
+        "taluka": "Haveli",
+        "village": "Wagholi",
+        "survey_number": "100/1",
+        "area_hectares": 1.5,
+        "land_type": "Agricultural",
+    }, headers={"Authorization": f"Bearer {token_a}"}).json()
+
+    # 1. Citizen B cannot view Citizen A's land by land_id -> 403
+    resp_get_land = client.get(f"/api/lands/{land_a['land_id']}", headers={"Authorization": f"Bearer {token_b}"})
+    assert resp_get_land.status_code == 403
+
+    # 2. Citizen B cannot impersonate Citizen A when creating land -> 403
+    resp_impersonate_land = client.post("/api/lands", json={
+        "owner_id": user_a_id,
+        "state": "Maharashtra",
+        "district": "Pune",
+        "taluka": "Haveli",
+        "village": "Wagholi",
+        "survey_number": "999/1",
+        "area_hectares": 2.5,
+        "land_type": "Agricultural",
+    }, headers={"Authorization": f"Bearer {token_b}"})
+    assert resp_impersonate_land.status_code == 403
+
+
+def test_citizen_cannot_mark_other_citizen_notification_read():
+    # Citizen A
+    resp_a = client.post("/api/auth/register", json={
+        "name": "Citizen Alpha",
+        "email": "alpha@example.com",
+        "role": "citizen",
+        "password": "PasswordA@123"
+    }).json()
+    token_a = resp_a["access_token"]
+    user_a_id = resp_a["user"]["user_id"]
+
+    # Citizen B
+    resp_b = client.post("/api/auth/register", json={
+        "name": "Citizen Beta",
+        "email": "beta@example.com",
+        "role": "citizen",
+        "password": "PasswordB@123"
+    }).json()
+    token_b = resp_b["access_token"]
+
+    # Create notification for Citizen A
+    notif = client.post("/api/cases", json={
+        "citizen_id": user_a_id,
+        "land_id": client.post("/api/lands", json={
+            "owner_id": user_a_id,
+            "state": "Maharashtra",
+            "district": "Pune",
+            "taluka": "Haveli",
+            "village": "Wagholi",
+            "survey_number": "50/1",
+            "area_hectares": 1.0,
+            "land_type": "Agricultural",
+        }, headers={"Authorization": f"Bearer {token_a}"}).json()["land_id"],
+        "category": "compensation_not_received",
+        "description": "Compensation delay issue.",
+    }, headers={"Authorization": f"Bearer {token_a}"})
+    assert notif.status_code == 201
+
+    # Fetch Citizen A's notifications
+    notifs_a = client.get(f"/api/users/{user_a_id}/notifications", headers={"Authorization": f"Bearer {token_a}"}).json()
+    assert len(notifs_a) > 0
+    notif_id = notifs_a[0]["notification_id"]
+
+    # Citizen B tries to mark Citizen A's notification as read -> 403
+    resp_mark = client.post(f"/api/notifications/{notif_id}/read", headers={"Authorization": f"Bearer {token_b}"})
+    assert resp_mark.status_code == 403
+
+    # Citizen A can mark their own notification as read -> 200
+    resp_mark_own = client.post(f"/api/notifications/{notif_id}/read", headers={"Authorization": f"Bearer {token_a}"})
+    assert resp_mark_own.status_code == 200
+    assert resp_mark_own.json()["read"] is True
+
+
+def test_citizen_cannot_perform_officer_actions():
+    # Setup Citizen with case
+    cit = client.post("/api/auth/register", json={
+        "name": "Citizen Commoner",
+        "email": "commoner@example.com",
+        "role": "citizen",
+        "password": "Password@123"
+    }).json()
+    cit_token = cit["access_token"]
+    cit_id = cit["user"]["user_id"]
+
+    land = client.post("/api/lands", json={
+        "owner_id": cit_id,
+        "state": "Maharashtra",
+        "district": "Pune",
+        "taluka": "Haveli",
+        "village": "Wagholi",
+        "survey_number": "300/1",
+        "area_hectares": 2.0,
+        "land_type": "Agricultural",
+    }, headers={"Authorization": f"Bearer {cit_token}"}).json()
+
+    case = client.post("/api/cases", json={
+        "citizen_id": cit_id,
+        "land_id": land["land_id"],
+        "category": "compensation_not_received",
+        "description": "Case for officer test.",
+    }, headers={"Authorization": f"Bearer {cit_token}"}).json()
+    case_id = case["case_id"]
+
+    # 1. Citizen cannot assign case -> 403
+    assign_resp = client.post(
+        f"/api/cases/{case_id}/assign",
+        json={"actor_user_id": cit_id, "assigned_officer_id": cit_id},
+        headers={"Authorization": f"Bearer {cit_token}"}
+    )
+    assert assign_resp.status_code == 403
+
+    # 2. Citizen cannot update case status to resolved -> 403
+    status_resp = client.post(
+        f"/api/cases/{case_id}/status",
+        json={"actor_user_id": cit_id, "status": "resolved"},
+        headers={"Authorization": f"Bearer {cit_token}"}
+    )
+    assert status_resp.status_code == 403
+
+    # 3. Citizen cannot request documents -> 403
+    doc_req_resp = client.post(
+        f"/api/cases/{case_id}/request-document",
+        json={"actor_user_id": cit_id, "document_type": "7_12_extract", "reason": "Need check"},
+        headers={"Authorization": f"Bearer {cit_token}"}
+    )
+    assert doc_req_resp.status_code == 403
+

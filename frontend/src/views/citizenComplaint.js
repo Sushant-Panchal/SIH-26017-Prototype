@@ -8,6 +8,7 @@ import { caseService } from '../api/cases.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { renderAuthGateway } from '../components/authModal.js';
 
 export async function renderCitizenComplaintView(container) {
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
@@ -15,13 +16,16 @@ export async function renderCitizenComplaintView(container) {
   const prefilledRiskProb = urlParams.get('risk_probability');
   const prefilledRiskLevel = urlParams.get('risk_level');
 
-  let user = authService.getStoredUser() || {
-    user_id: 'USR-CITIZEN-01',
-    name: 'Ramesh Patil',
-    email: 'ramesh.patil@example.com',
-    role: 'citizen',
-    district: 'Pune',
-  };
+  const user = authService.getStoredUser();
+  if (!user || user.role !== 'citizen') {
+    renderAuthGateway(container, {
+      role: 'citizen',
+      title: t('auth.citizenComplaintGatewayTitle', 'Sign In to File Land Acquisition Grievance'),
+      message: t('auth.citizenComplaintGatewayMsg', 'Authenticated identity is required to generate statutory case IDs, assign revenue officers, and track dispute timelines.'),
+      onLoginSuccess: () => renderCitizenComplaintView(container),
+    });
+    return;
+  }
 
   container.innerHTML = `
     <div class="space-y-6 max-w-4xl mx-auto pb-12 animate-fade-in">
@@ -59,7 +63,14 @@ export async function renderCitizenComplaintView(container) {
             <select id="caseLandId" required class="w-full px-3 py-2.5 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
               <option value="">-- Choose registered land parcel --</option>
             </select>
-            <div class="flex items-center justify-between text-[11px] text-on-surface-variant mt-1">
+            <div id="noLandsPrompt" class="hidden p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2 mt-2">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px] text-amber-600 dark:text-amber-400">warning</span>
+                <span>No registered land records found under your account. Please register your parcel before submitting a formal grievance.</span>
+              </div>
+              <a href="#/citizen-lands" class="px-2.5 py-1 bg-primary text-on-primary rounded font-semibold text-[11px] whitespace-nowrap shadow-xs">Register Land</a>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-on-surface-variant mt-1.5">
               <span>Parcel not registered?</span>
               <a href="#/citizen-lands" class="text-primary font-semibold hover:underline flex items-center gap-0.5">
                 <span>Register new land first</span>
@@ -241,6 +252,15 @@ export async function renderCitizenComplaintView(container) {
 
     try {
       const landId = document.getElementById('caseLandId').value;
+      if (!landId) {
+        alert('Please select a registered land parcel. If you have not registered your land yet, please visit "My Land" to register your survey number first.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[18px]">send</span>
+          <span>${t('citizen.submitGrievanceBtn', 'Submit Formal Grievance to SLAO')}</span>
+        `;
+        return;
+      }
       const category = document.getElementById('caseCategory').value;
       const priority = document.getElementById('casePriority').value;
       const description = document.getElementById('caseDescription').value.trim();
@@ -311,14 +331,23 @@ async function loadLandsForComplaint(userId, preselectedId) {
 
     if (lands.length === 0) {
       const opt = document.createElement('option');
-      opt.value = 'LND-TEMP-01';
-      opt.textContent = 'Default Parcel - Survey 101/A (1.5 Ha)';
+      opt.value = '';
+      opt.disabled = true;
+      opt.selected = true;
+      opt.textContent = '-- No registered land parcels found --';
       select.appendChild(opt);
+
+      const promptEl = document.getElementById('noLandsPrompt');
+      if (promptEl) {
+        promptEl.classList.remove('hidden');
+      }
     }
-  } catch (_) {
+  } catch (err) {
     const opt = document.createElement('option');
-    opt.value = 'LND-DEFAULT';
-    opt.textContent = 'Primary Registered Parcel';
+    opt.value = '';
+    opt.disabled = true;
+    opt.selected = true;
+    opt.textContent = '-- Error loading land holdings --';
     select.appendChild(opt);
   }
 }
