@@ -104,6 +104,66 @@ def test_production_officer_key_accepts_configured_secret(monkeypatch):
     assert good_resp.json()["user"]["role"] == "officer"
 
 
+def test_production_officer_key_rejects_example_placeholders(monkeypatch):
+    """
+    In production mode, the server strictly refuses example placeholders
+    such as 'replace-with-a-strong-secret'.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    for placeholder in ["replace-with-a-strong-secret", "dev-officer-key-local-only", "your-secure-officer-registration-passphrase"]:
+        monkeypatch.setenv("OFFICER_REGISTRATION_KEY", placeholder)
+        with pytest.raises(RuntimeError) as exc_info:
+            get_officer_registration_key()
+        assert "OFFICER_REGISTRATION_KEY" in str(exc_info.value)
+
+
+def test_officer_key_never_leaked_in_responses_or_errors(monkeypatch):
+    """
+    Ensures the officer registration key is never leaked in success responses,
+    error responses (403), or configuration error responses (503).
+    """
+    secret_key = "SuperClassifiedGovKey987!"
+    monkeypatch.setenv("OFFICER_REGISTRATION_KEY", secret_key)
+
+    # 1. 403 Forbidden on invalid key
+    bad_resp = client.post("/api/auth/register", json={
+        "name": "Officer Test",
+        "email": "leak_test_bad@gov.in",
+        "role": "officer",
+        "password": "Password@123",
+        "officer_key": "wrong-guess",
+    })
+    assert bad_resp.status_code == 403
+    assert secret_key not in bad_resp.text
+    assert "wrong-guess" not in bad_resp.text
+
+    # 2. 201 Created on valid key
+    good_resp = client.post("/api/auth/register", json={
+        "name": "Officer Valid",
+        "email": "leak_test_good@gov.in",
+        "role": "officer",
+        "password": "Password@123",
+        "officer_key": secret_key,
+    })
+    assert good_resp.status_code == 201
+    assert secret_key not in good_resp.text
+    assert "officer_key" not in good_resp.json()["user"]
+
+    # 3. 503 on unconfigured production key
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("OFFICER_REGISTRATION_KEY", raising=False)
+    err_resp = client.post("/api/auth/register", json={
+        "name": "Officer Fail",
+        "email": "leak_test_prod_fail@gov.in",
+        "role": "officer",
+        "password": "Password@123",
+        "officer_key": secret_key,
+    })
+    assert err_resp.status_code == 503
+    assert secret_key not in err_resp.text
+
+
+
 def test_production_jwt_secret_rejects_default(monkeypatch):
     """
     In production mode, the server strictly refuses to use the default repository JWT secret.
@@ -203,7 +263,7 @@ def test_pagination_bounds_clamped():
         "email": "off_bound@gov.in",
         "role": "officer",
         "password": "Password@123",
-        "officer_key": DEFAULT_OFFICER_REGISTRATION_KEY,
+        "officer_key": get_officer_registration_key(),
     }).json()
     token = off_resp["access_token"]
 

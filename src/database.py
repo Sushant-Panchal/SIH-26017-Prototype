@@ -13,6 +13,27 @@ from datetime import datetime
 
 logger = logging.getLogger("bhoomi_sakha.database")
 
+def _load_env_if_present() -> None:
+    """Load key-value pairs from root .env into os.environ if not already defined."""
+    from pathlib import Path
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.is_file():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip().strip("'\"")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+        except Exception as e:
+            logger.warning("Could not read .env: %s", e)
+
+_load_env_if_present()
+
 # Environment configuration
 MONGODB_URI = os.getenv("MONGODB_URI", "")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "bhoomi_sakha")

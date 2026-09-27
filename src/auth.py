@@ -16,20 +16,33 @@ import jwt
 
 from .database import is_production_environment
 
-# Default repository values for local development and test automation only.
+# Default development-only fallback values for local development and test automation.
 # Strictly forbidden in production environments.
-DEFAULT_JWT_SECRET = "bhoomi-sakha-production-secret-key-phase2-sih26017"
-DEFAULT_OFFICER_REGISTRATION_KEY = "bhoomi-officer-secret-key-2026"
+DEFAULT_JWT_SECRET = "bhoomi-sakha-dev-secret-key-phase2-sih26017"
+DEFAULT_DEV_OFFICER_KEY = "dev-officer-key-local-only"
+DEFAULT_OFFICER_REGISTRATION_KEY = DEFAULT_DEV_OFFICER_KEY
+
+FORBIDDEN_DEV_JWT_SECRETS = {
+    DEFAULT_JWT_SECRET,
+    "bhoomi-sakha-production-secret-key-phase2-sih26017",
+    "your-random-32-character-secret-key-here",
+}
+
+FORBIDDEN_DEV_OFFICER_KEYS = {
+    DEFAULT_DEV_OFFICER_KEY,
+    "replace-with-a-strong-secret",
+    "your-secure-officer-registration-passphrase",
+}
 
 def get_jwt_secret() -> str:
     """
     Retrieves the JWT signing secret.
     In production, strictly enforces that an explicit, secure JWT_SECRET is provided
-    and forbids falling back to the known repository default.
+    and forbids falling back to known repository or example defaults.
     """
     secret = os.getenv("JWT_SECRET", "").strip()
     if is_production_environment():
-        if not secret or secret == DEFAULT_JWT_SECRET:
+        if not secret or secret in FORBIDDEN_DEV_JWT_SECRETS:
             raise RuntimeError(
                 "Production environment requires an explicitly configured, secure JWT_SECRET environment variable. "
                 "Default or empty JWT secret is strictly prohibited in production."
@@ -42,24 +55,24 @@ def get_officer_registration_key() -> str:
     """
     Retrieves the administrative officer registration key.
     In production, strictly enforces that an explicit, secure OFFICER_REGISTRATION_KEY is provided
-    and forbids falling back to the known repository default.
+    and forbids falling back to any default or placeholder value.
     """
     key = os.getenv("OFFICER_REGISTRATION_KEY", "").strip()
     if is_production_environment():
-        if not key or key == DEFAULT_OFFICER_REGISTRATION_KEY:
+        if not key or key in FORBIDDEN_DEV_OFFICER_KEYS:
             raise RuntimeError(
                 "Production environment requires an explicitly configured, secure OFFICER_REGISTRATION_KEY environment variable. "
                 "Default or empty registration key is strictly prohibited in production."
             )
         return key
-    return key or DEFAULT_OFFICER_REGISTRATION_KEY
+    return key or DEFAULT_DEV_OFFICER_KEY
 
 
 # Module-level aliases for backwards compatibility with tests and callers
 JWT_SECRET = os.getenv("JWT_SECRET", DEFAULT_JWT_SECRET)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
-OFFICER_REGISTRATION_KEY = os.getenv("OFFICER_REGISTRATION_KEY", DEFAULT_OFFICER_REGISTRATION_KEY)
+OFFICER_REGISTRATION_KEY = os.getenv("OFFICER_REGISTRATION_KEY", DEFAULT_DEV_OFFICER_KEY)
 
 security_scheme = HTTPBearer(auto_error=False)
 
