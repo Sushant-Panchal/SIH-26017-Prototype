@@ -14,11 +14,52 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 
-# Environment configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "bhoomi-sakha-production-secret-key-phase2-sih26017")
+from .database import is_production_environment
+
+# Default repository values for local development and test automation only.
+# Strictly forbidden in production environments.
+DEFAULT_JWT_SECRET = "bhoomi-sakha-production-secret-key-phase2-sih26017"
+DEFAULT_OFFICER_REGISTRATION_KEY = "bhoomi-officer-secret-key-2026"
+
+def get_jwt_secret() -> str:
+    """
+    Retrieves the JWT signing secret.
+    In production, strictly enforces that an explicit, secure JWT_SECRET is provided
+    and forbids falling back to the known repository default.
+    """
+    secret = os.getenv("JWT_SECRET", "").strip()
+    if is_production_environment():
+        if not secret or secret == DEFAULT_JWT_SECRET:
+            raise RuntimeError(
+                "Production environment requires an explicitly configured, secure JWT_SECRET environment variable. "
+                "Default or empty JWT secret is strictly prohibited in production."
+            )
+        return secret
+    return secret or DEFAULT_JWT_SECRET
+
+
+def get_officer_registration_key() -> str:
+    """
+    Retrieves the administrative officer registration key.
+    In production, strictly enforces that an explicit, secure OFFICER_REGISTRATION_KEY is provided
+    and forbids falling back to the known repository default.
+    """
+    key = os.getenv("OFFICER_REGISTRATION_KEY", "").strip()
+    if is_production_environment():
+        if not key or key == DEFAULT_OFFICER_REGISTRATION_KEY:
+            raise RuntimeError(
+                "Production environment requires an explicitly configured, secure OFFICER_REGISTRATION_KEY environment variable. "
+                "Default or empty registration key is strictly prohibited in production."
+            )
+        return key
+    return key or DEFAULT_OFFICER_REGISTRATION_KEY
+
+
+# Module-level aliases for backwards compatibility with tests and callers
+JWT_SECRET = os.getenv("JWT_SECRET", DEFAULT_JWT_SECRET)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
-OFFICER_REGISTRATION_KEY = os.getenv("OFFICER_REGISTRATION_KEY", "bhoomi-officer-secret-key-2026")
+OFFICER_REGISTRATION_KEY = os.getenv("OFFICER_REGISTRATION_KEY", DEFAULT_OFFICER_REGISTRATION_KEY)
 
 security_scheme = HTTPBearer(auto_error=False)
 
@@ -87,13 +128,15 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(timezone.utc),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    secret = get_jwt_secret()
+    return jwt.encode(payload, secret, algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> Dict[str, Any]:
     """Decode and validate JWT access token, checking expiration."""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        secret = get_jwt_secret()
+        payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(

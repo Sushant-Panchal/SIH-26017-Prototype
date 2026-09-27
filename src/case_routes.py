@@ -9,7 +9,7 @@ import os
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form, Response
 from fastapi.security import HTTPAuthorizationCredentials
-from .database import get_database
+from .database import get_database, is_production_environment
 from .auth import security_scheme, decode_access_token
 from .case_models import (
     UserRole,
@@ -498,6 +498,12 @@ async def create_case(payload: CaseCreate, auth_user: Optional[dict] = Depends(g
 
 @router.get("/cases/metrics/summary", response_model=OfficerMetricsSummary)
 async def get_case_metrics_summary(officer_id: Optional[str] = None, auth_user: Optional[dict] = Depends(get_auth_context)):
+    if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Citizens cannot access officer operational metrics.",
+        )
+
     db = get_database()
     cases = db.get_collection("cases")
     all_cases = await cases.find({}).to_list(1000)
@@ -538,6 +544,10 @@ async def list_cases(
     limit: int = 15,
     auth_user: Optional[dict] = Depends(get_auth_context),
 ):
+    # Server-side pagination bounds to prevent resource exhaustion
+    page = max(1, page)
+    limit = max(1, min(limit, 100))
+
     query = {}
     if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
         query["citizen_id"] = auth_user.get("user_id")
@@ -965,7 +975,8 @@ async def request_document_upload_url(
     except StorageConfigurationError as err:
         raise HTTPException(status_code=503, detail=str(err))
     except StorageError as err:
-        raise HTTPException(status_code=500, detail=f"Storage provider error: {err}")
+        logger.error("Storage upload URL generation error: %s", err)
+        raise HTTPException(status_code=500, detail="Storage provider encountered an error generating upload URL.")
 
     return DocumentUploadUrlResponse(
         document_id=doc_id,
@@ -1118,7 +1129,8 @@ async def upload_case_document_file(
     except StorageConfigurationError as err:
         raise HTTPException(status_code=503, detail=str(err))
     except StorageError as err:
-        raise HTTPException(status_code=500, detail=f"Storage upload failed: {err}")
+        logger.error("Direct storage upload error: %s", err)
+        raise HTTPException(status_code=500, detail="Storage upload encountered an internal error.")
 
     now = now_utc()
     storage_ref = upload_result.get("storage_reference", f"s3://{object_key}")
@@ -1168,6 +1180,9 @@ async def upload_case_document_file(
 
 @router.get("/cases/{case_id}/documents", response_model=List[CaseDocumentResponse])
 async def get_case_documents(case_id: str, auth_user: Optional[dict] = Depends(get_auth_context)):
+    if is_production_environment() and not auth_user:
+        raise HTTPException(status_code=401, detail="Authentication required to view case documents.")
+
     db = get_database()
     case = await get_case_or_404(case_id, db=db)
     if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
@@ -1216,7 +1231,8 @@ async def get_document_access_url(
     except StorageConfigurationError as err:
         raise HTTPException(status_code=503, detail=str(err))
     except StorageError as err:
-        raise HTTPException(status_code=500, detail=f"Storage error generating access URL: {err}")
+        logger.error("Storage access URL generation error: %s", err)
+        raise HTTPException(status_code=500, detail="Storage provider encountered an error generating access URL.")
 
     return DocumentAccessUrlResponse(
         document_id=document_id,
@@ -1263,7 +1279,8 @@ async def download_case_document(
     except StorageConfigurationError as err:
         raise HTTPException(status_code=503, detail=str(err))
     except StorageError as err:
-        raise HTTPException(status_code=404, detail=f"File not found in storage: {err}")
+        logger.error("Storage download error: %s", err)
+        raise HTTPException(status_code=404, detail="File not found in storage.")
 
     safe_name = sanitize_filename(doc.get("file_name", "document.pdf"))
     return Response(

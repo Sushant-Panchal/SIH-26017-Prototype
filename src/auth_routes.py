@@ -7,6 +7,8 @@ import os
 from fastapi import APIRouter, HTTPException, status, Depends
 import logging
 
+import hmac
+
 from .database import get_database
 from .case_models import (
     UserRole,
@@ -21,9 +23,11 @@ from .auth import (
     verify_password,
     create_access_token,
     get_current_user,
+    get_officer_registration_key,
     OFFICER_REGISTRATION_KEY,
 )
 from .case_routes import sanitize_doc, now_utc
+from .rate_limiter import auth_rate_limiter
 
 logger = logging.getLogger("bhoomi_sakha.auth_routes")
 
@@ -31,7 +35,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=AuthTokenResponse, status_code=201)
-async def register(payload: UserCreate):
+async def register(payload: UserCreate, _limiter: None = Depends(auth_rate_limiter)):
     """
     Registers a new user (Citizen or Officer with verified authorization key).
     Prevents unauthorized role escalation to officer.
@@ -41,7 +45,17 @@ async def register(payload: UserCreate):
 
     # Prevent role escalation: Officer registration requires secret key
     if payload.role in (UserRole.OFFICER, UserRole.SUPER_ADMIN):
-        if not payload.officer_key or payload.officer_key != OFFICER_REGISTRATION_KEY:
+        try:
+            expected_key = get_officer_registration_key()
+        except RuntimeError as exc:
+            logger.critical("Officer registration blocked by configuration: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Officer registration is currently disabled due to server security configuration.",
+            )
+
+        supplied_key = (payload.officer_key or "").strip()
+        if not supplied_key or not hmac.compare_digest(supplied_key, expected_key.strip()):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Registration as an Officer requires a valid Officer Registration Key.",
@@ -87,7 +101,7 @@ async def register(payload: UserCreate):
 
 
 @router.post("/login", response_model=AuthTokenResponse)
-async def login(payload: LoginRequest):
+async def login(payload: LoginRequest, _limiter: None = Depends(auth_rate_limiter)):
     """
     Authenticates user with email and password, returning signed JWT access token.
     """

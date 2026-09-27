@@ -1,17 +1,23 @@
-from typing import Any
+import os
+import logging
+from typing import Any, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from contextlib import asynccontextmanager
 
 from .inference import DelayPredictor
-from .database import init_indexes
+from .database import init_indexes, get_database, is_production_environment
+from .storage import get_storage_provider
 from .case_routes import router as case_router
 from .auth_routes import router as auth_router
 from .realtime import router as realtime_router
+from .rate_limiter import predict_rate_limiter
 
+logger = logging.getLogger("bhoomi_sakha.api")
 
 MODEL_PATH = "models/baseline_model.json"
 FEATURE_NAMES_PATH = "models/feature_names.joblib"
@@ -34,13 +40,55 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+def get_allowed_origins() -> List[str]:
+    """Computes allowed CORS origins based on environment settings and development defaults."""
+    raw_origins = os.getenv("ALLOWED_ORIGINS", os.getenv("CORS_ORIGINS", "")).strip()
+    frontend_url = os.getenv("FRONTEND_URL", "").strip()
+
+    origins = set()
+    if raw_origins:
+        for o in raw_origins.split(","):
+            if o.strip():
+                origins.add(o.strip())
+    if frontend_url:
+        origins.add(frontend_url)
+
+    # Always permit local development origins
+    dev_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+    origins.update(dev_origins)
+    return list(origins)
+
+
+# Production-hardened CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_allowed_origins(),
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Safely captures unhandled exceptions without leaking stack traces,
+    database internal connection strings, or filesystem paths.
+    """
+    logger.exception("Unhandled server exception processing %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."},
+    )
 
 # Authentication Router
 app.include_router(auth_router)
@@ -472,23 +520,81 @@ def meta() -> dict[str, Any]:
 
 
 # ============================================================
+# READINESS PROBE
+# ============================================================
+
+@app.get("/ready")
+@app.get("/api/ready")
+async def readiness() -> dict[str, Any]:
+    """
+    Production readiness probe verifying database connectivity,
+    storage configuration, and ML model availability.
+    """
+    db_status = "unknown"
+    db_ready = False
+    try:
+        db = get_database()
+        if hasattr(db, "get_collection"):
+            users = db.get_collection("users")
+            await users.count_documents({})
+            db_status = "connected"
+            db_ready = True
+    except Exception as exc:
+        logger.error("Readiness check: Database probe failed: %s", exc)
+        db_status = f"unhealthy: {type(exc).__name__}"
+
+    storage_provider = get_storage_provider()
+    storage_name = storage_provider.get_provider_name()
+    storage_configured = storage_provider.is_configured()
+
+    model_ready = bool(predictor and predictor.model is not None)
+
+    overall_ready = db_ready and model_ready
+    response_payload = {
+        "status": "ready" if overall_ready else "not_ready",
+        "database": {
+            "status": db_status,
+            "ready": db_ready,
+            "provider": "motor_mongodb" if is_production_environment() else "in_memory_or_motor",
+        },
+        "storage": {
+            "provider": storage_name,
+            "configured": storage_configured,
+        },
+        "model": {
+            "ready": model_ready,
+            "features": len(predictor.feature_names) if predictor else 0,
+        },
+    }
+
+    if not overall_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=response_payload,
+        )
+
+    return response_payload
+
+
+# ============================================================
 # PREDICTION
 # ============================================================
 
 @app.post("/predict")
-def predict(project: ProjectInput) -> dict[str, Any]:
-
+def predict(project: ProjectInput, _limiter: None = Depends(predict_rate_limiter)) -> dict[str, Any]:
+    """
+    Evaluates land acquisition project risk snapshot using XGBoost model.
+    Rate-limited and error-masked to protect model internals.
+    """
     try:
         project_data = project.model_dump()
-
-        result = predictor.predict(
-            project_data
-        )
-
+        result = predictor.predict(project_data)
         return result
-
+    except HTTPException:
+        raise
     except Exception as exc:
+        logger.exception("Prediction processing error: %s", exc)
         raise HTTPException(
             status_code=500,
-            detail=f"Prediction failed: {str(exc)}",
+            detail="Unable to process the risk prediction request right now.",
         ) from exc

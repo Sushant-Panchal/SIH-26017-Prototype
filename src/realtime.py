@@ -186,9 +186,10 @@ async def sse_events(
     except HTTPException:
         raise
     except Exception as err:
+        logger.warning("Invalid realtime auth token provided: %s", type(err).__name__)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid real-time authentication token: {err}",
+            detail="Invalid real-time authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
