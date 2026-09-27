@@ -12,6 +12,7 @@ import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
 import { realtimeService } from '../api/realtime.js';
 import { showToast } from '../utils/toast.js';
+import { getLocalizedCaseStatus, getLocalizedCategory } from '../utils/localization.js';
 
 const VALID_STATUS_TRANSITIONS = {
   submitted: ['received', 'assigned', 'under_review', 'rejected'],
@@ -27,7 +28,7 @@ const VALID_STATUS_TRANSITIONS = {
   closed: [],
 };
 
-export async function renderOfficerWorkspaceView(container) {
+export async function renderOfficerWorkspaceView(container, savedState = null) {
   if (container._cleanupRealtime) {
     container._cleanupRealtime();
     container._cleanupRealtime = null;
@@ -70,7 +71,7 @@ export async function renderOfficerWorkspaceView(container) {
         <p class="text-xs text-on-surface-variant mt-1 mb-4">Please select a case from the officer case queue.</p>
         <a href="#/cases" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-semibold inline-flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span>Back to Case Queue</span>
+          <span>${t('officer.backToCases', 'Back to Case Queue')}</span>
         </a>
       </div>
     `;
@@ -82,15 +83,15 @@ export async function renderOfficerWorkspaceView(container) {
       <div class="flex items-center justify-between text-xs text-on-surface-variant font-label-sm">
         <a href="#/cases" class="hover:text-primary transition-colors flex items-center gap-1">
           <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span>Back to Case Queue</span>
+          <span>${t('officer.backToCases', 'Back to Case Queue')}</span>
         </a>
-        <span class="font-tabular-data">Officer: <strong class="text-on-surface">${officer.name || officer.user_id}</strong> (${officer.role})</span>
+        <span class="font-tabular-data">${t('officer.officerLabel', 'Officer')}: <strong class="text-on-surface">${officer.name || officer.user_id}</strong> (${officer.role})</span>
       </div>
 
       <div id="workspaceContent" class="space-y-6">
         <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-8 text-center text-on-surface-variant">
           <span class="material-symbols-outlined animate-spin text-[32px] text-primary mb-2">progress_activity</span>
-          <p class="text-sm font-medium">Loading case dossier and audit history for ${caseId}...</p>
+          <p class="text-sm font-medium">${t('officer.loadingDossier', 'Loading case dossier and audit history')} for ${caseId}...</p>
         </div>
       </div>
 
@@ -100,6 +101,9 @@ export async function renderOfficerWorkspaceView(container) {
   `;
 
   await loadAndRenderWorkspace(caseId, officer, container);
+  if (savedState && window.bhoomiSakhaApp?.restoreContainerState) {
+    window.bhoomiSakhaApp.restoreContainerState(container, savedState);
+  }
 }
 
 async function loadAndRenderWorkspace(caseId, officer, container) {
@@ -145,7 +149,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
         closed: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600',
         rejected: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 border-red-300 dark:border-red-700',
       };
-      return `<span class="px-2.5 py-1 text-xs font-bold rounded-md border ${styles[s] || styles.submitted}">${s.replace(/_/g, ' ').toUpperCase()}</span>`;
+      return `<span class="px-2.5 py-1 text-xs font-bold rounded-md border ${styles[s] || styles.submitted}">${getLocalizedCaseStatus(s)}</span>`;
     };
 
     const riskBadge = (prob, lvl) => {
@@ -175,12 +179,12 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
               ${riskBadge(caseData.risk_probability, caseData.risk_level)}
             </div>
             <h1 class="text-2xl font-bold font-headline-md text-on-surface">
-              ${caseData.category.replace(/_/g, ' ').toUpperCase()}
+              ${getLocalizedCategory(caseData.category)}
             </h1>
             <p class="text-xs text-on-surface-variant mt-1 flex flex-wrap items-center gap-3">
               <span>Filed: <strong class="text-on-surface font-tabular-data">${new Date(caseData.created_at).toLocaleString()}</strong></span>
               <span>•</span>
-              <span>Assigned Officer: <strong class="text-on-surface">${caseData.assigned_officer_id || '<span class="text-amber-600 italic">Unassigned</span>'}</strong></span>
+              <span>Assigned Officer: <strong class="text-on-surface">${caseData.assigned_officer_id || `<span class="text-amber-600 italic">${t('officer.unassigned', 'Unassigned')}</span>`}</strong></span>
               <span>•</span>
               <span>Project: <strong class="text-on-surface">${caseData.project_id || 'General Acquisition'}</strong></span>
             </p>
@@ -190,22 +194,22 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
           <div class="flex flex-wrap items-center gap-2">
             <button id="btnOpenStatusModal" class="px-3 py-2 bg-primary text-on-primary rounded-lg text-xs font-semibold hover:opacity-95 shadow-xs flex items-center gap-1.5 transition-all">
               <span class="material-symbols-outlined text-[16px]">sync_alt</span>
-              <span>Update Status</span>
+              <span>${t('officer.updateStatus', 'Update Status')}</span>
             </button>
 
             <button id="btnOpenAssignModal" class="px-3 py-2 bg-surface-container border border-outline-variant/60 rounded-lg text-xs font-semibold text-on-surface hover:bg-surface-container-high flex items-center gap-1.5 transition-all">
               <span class="material-symbols-outlined text-[16px]">person_add</span>
-              <span>Assign / Reassign</span>
+              <span>${t('officer.assignReassign', 'Assign / Reassign')}</span>
             </button>
 
             <button id="btnOpenDocRequestModal" class="px-3 py-2 bg-surface-container border border-outline-variant/60 rounded-lg text-xs font-semibold text-on-surface hover:bg-surface-container-high flex items-center gap-1.5 transition-all">
               <span class="material-symbols-outlined text-[16px]">post_add</span>
-              <span>Request Document</span>
+              <span>${t('officer.requestDoc', 'Request Document')}</span>
             </button>
 
             <button id="btnOpenInternalNoteModal" class="px-3 py-2 bg-surface-container border border-outline-variant/60 rounded-lg text-xs font-semibold text-on-surface hover:bg-surface-container-high flex items-center gap-1.5 transition-all">
               <span class="material-symbols-outlined text-[16px]">lock</span>
-              <span>Add Internal Note</span>
+              <span>${t('officer.addInternalNote', 'Add Internal Note')}</span>
             </button>
           </div>
         </div>
@@ -222,21 +226,21 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
               <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px] text-primary">person</span>
-                <span>Complainant Details</span>
+                <span>${t('officer.complainantDetails', 'Complainant Details')}</span>
               </h2>
               <span class="text-[11px] font-tabular-data text-on-surface-variant">${caseData.citizen_id}</span>
             </div>
             <div class="text-xs space-y-2">
               <div class="flex justify-between">
-                <span class="text-on-surface-variant">Name:</span>
+                <span class="text-on-surface-variant">${t('common.name', 'Name')}:</span>
                 <span class="font-semibold text-on-surface">${citizenData ? citizenData.name : 'Citizen User'}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-on-surface-variant">Phone / Mobile:</span>
+                <span class="text-on-surface-variant">${t('common.phone', 'Phone / Mobile')}:</span>
                 <span class="font-tabular-data text-on-surface">${citizenData ? citizenData.phone : 'Not provided'}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-on-surface-variant">Email Address:</span>
+                <span class="text-on-surface-variant">${t('common.email', 'Email Address')}:</span>
                 <span class="text-on-surface">${citizenData ? citizenData.email : 'N/A'}</span>
               </div>
             </div>
@@ -247,30 +251,30 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
               <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px] text-primary">terrain</span>
-                <span>Cadastral Land Parcel</span>
+                <span>${t('officer.cadastralParcel', 'Cadastral Land Parcel')}</span>
               </h2>
               <span class="text-[11px] font-tabular-data text-on-surface-variant">${caseData.land_id}</span>
             </div>
             ${landData ? `
               <div class="text-xs space-y-2">
                 <div class="flex justify-between">
-                  <span class="text-on-surface-variant">Survey / Gat No:</span>
+                  <span class="text-on-surface-variant">${t('common.surveyNo', 'Survey / Gat No')}:</span>
                   <span class="font-bold text-on-surface font-tabular-data">${landData.survey_number}</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-on-surface-variant">Location:</span>
+                  <span class="text-on-surface-variant">${t('common.location', 'Location')}:</span>
                   <span class="text-on-surface font-medium">${landData.village}, ${landData.taluka}, ${landData.district}</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-on-surface-variant">Land Area:</span>
+                  <span class="text-on-surface-variant">${t('common.area', 'Land Area')}:</span>
                   <span class="font-tabular-data text-on-surface">${landData.area_acres} Acres (${landData.land_type || 'Agricultural'})</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-on-surface-variant">Acquisition Status:</span>
+                  <span class="text-on-surface-variant">${t('common.status', 'Acquisition Status')}:</span>
                   <span class="font-semibold text-primary">${landData.acquisition_status || 'Notification Issued'}</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-on-surface-variant">Declared by Citizen:</span>
+                  <span class="text-on-surface-variant">${t('common.declaredDispute', 'Declared by Citizen')}:</span>
                   <span class="font-tabular-data text-on-surface-variant">${landData.citizen_declared_dispute ? '<span class="text-error font-semibold">Active Dispute Noted</span>' : 'Clear Ownership'}</span>
                 </div>
               </div>
@@ -284,7 +288,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
               <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px] text-primary">psychology</span>
-                <span>AI Delay Risk Intelligence</span>
+                <span>${t('officer.aiRiskIntelligence', 'AI Delay Risk Intelligence')}</span>
               </h2>
               <span class="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">XGBoost ML</span>
             </div>
@@ -307,7 +311,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
                 <ul class="space-y-1 text-on-surface text-[11px]">
                   <li class="flex items-center gap-1 text-error">
                     <span class="material-symbols-outlined text-[13px]">arrow_upward</span>
-                    <span>Grievance Category: ${caseData.category.replace(/_/g, ' ')}</span>
+                    <span>Grievance Category: ${getLocalizedCategory(caseData.category)}</span>
                   </li>
                   <li class="flex items-center gap-1 text-amber-600">
                     <span class="material-symbols-outlined text-[13px]">schedule</span>
@@ -331,7 +335,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
           <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-5 shadow-sm space-y-3">
             <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5 border-b border-outline-variant/30 pb-2">
               <span class="material-symbols-outlined text-[16px] text-primary">description</span>
-              <span>Grievance Description & Demands</span>
+              <span>${t('officer.grievanceDemands', 'Grievance Description & Demands')}</span>
             </h2>
 
             <div class="text-xs text-on-surface leading-relaxed bg-surface-container-lowest p-3.5 rounded-lg border border-outline-variant/30">
@@ -340,12 +344,12 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
 
             <div class="grid grid-cols-2 gap-2 text-xs pt-1">
               <div class="p-2 bg-surface-container rounded-lg">
-                <span class="text-[10px] text-on-surface-variant uppercase block">Category</span>
-                <span class="font-semibold text-on-surface">${caseData.category.replace(/_/g, ' ').toUpperCase()}</span>
+                <span class="text-[10px] text-on-surface-variant uppercase block">${t('citizen.fieldCategory', 'Category')}</span>
+                <span class="font-semibold text-on-surface">${getLocalizedCategory(caseData.category)}</span>
               </div>
               <div class="p-2 bg-surface-container rounded-lg">
-                <span class="text-[10px] text-on-surface-variant uppercase block">Target SLA</span>
-                <span class="font-semibold text-on-surface">15 Working Days</span>
+                <span class="text-[10px] text-on-surface-variant uppercase block">${t('officer.targetSla', 'Target SLA')}</span>
+                <span class="font-semibold text-on-surface">${t('officer.workDays', '15 Working Days')}</span>
               </div>
             </div>
           </div>
@@ -355,7 +359,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
               <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px] text-primary">folder_shared</span>
-                <span>Document Verification Center</span>
+                <span>${t('officer.docVerificationCenter', 'Document Verification Center')}</span>
               </h2>
               <span class="text-xs font-bold font-tabular-data text-on-surface">${documents.length} File(s)</span>
             </div>
@@ -363,9 +367,9 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             ${documents.length === 0 ? `
               <div class="py-6 text-center text-on-surface-variant text-xs italic bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/40">
                 <span class="material-symbols-outlined text-[24px] text-on-surface-variant/60 block mb-1">attachment</span>
-                <span>No supporting documents uploaded yet.</span>
+                <span>${t('officer.noSupportingDocs', 'No supporting documents uploaded yet.')}</span>
                 <div class="mt-2">
-                  <button id="btnEmptyDocRequest" class="text-primary hover:underline font-semibold">Request documents from citizen</button>
+                  <button id="btnEmptyDocRequest" class="text-primary hover:underline font-semibold">${t('officer.requestDocsFromCitizen', 'Request documents from citizen')}</button>
                 </div>
               </div>
             ` : `
@@ -391,15 +395,15 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
                         <div>
                           ${isVerified ? `
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-300">
-                              ✓ VERIFIED
+                              ✓ ${t('officer.verifiedBadge', 'VERIFIED')}
                             </span>
                           ` : isRejected ? `
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 border border-red-300">
-                              ✕ REJECTED
+                              ✕ ${t('officer.rejectedBadge', 'REJECTED')}
                             </span>
                           ` : `
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300">
-                              PENDING REVIEW
+                              ${t('officer.pendingReviewBadge', 'PENDING REVIEW')}
                             </span>
                           `}
                         </div>
@@ -414,16 +418,16 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
                       <div class="flex items-center justify-end gap-2 pt-1 border-t border-outline-variant/20">
                         <a href="${caseService.getDocumentDownloadUrl(caseData.case_id, doc.document_id)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 text-on-surface rounded text-[11px] font-semibold flex items-center gap-1 transition-colors">
                           <span class="material-symbols-outlined text-[13px]">open_in_new</span>
-                          <span>Open Document</span>
+                          <span>${t('officer.openDoc', 'Open Document')}</span>
                         </a>
                         ${isPending ? `
                           <button data-doc-id="${doc.document_id}" class="btnVerifyDoc px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold flex items-center gap-1 transition-colors">
                             <span class="material-symbols-outlined text-[13px]">check</span>
-                            <span>Verify Document</span>
+                            <span>${t('officer.verifyDoc', 'Verify Document')}</span>
                           </button>
                           <button data-doc-id="${doc.document_id}" class="btnRejectDoc px-2.5 py-1 bg-error hover:opacity-90 text-white rounded text-[11px] font-bold flex items-center gap-1 transition-colors">
                             <span class="material-symbols-outlined text-[13px]">close</span>
-                            <span>Reject with Reason</span>
+                            <span>${t('officer.rejectDoc', 'Reject with Reason')}</span>
                           </button>
                         ` : ''}
                       </div>
@@ -443,7 +447,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
           <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-4 shadow-sm space-y-3">
             <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5 border-b border-outline-variant/30 pb-2">
               <span class="material-symbols-outlined text-[16px] text-primary">lock</span>
-              <span>Confidential Internal Note</span>
+              <span>${t('officer.confidentialNote', 'Confidential Internal Note')}</span>
             </h2>
             <p class="text-[11px] text-on-surface-variant">
               Internal notes are recorded strictly in the officer audit log and are <strong>never</strong> visible to citizens.
@@ -452,7 +456,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
               <textarea id="internalNoteText" rows="3" required placeholder="Record field inspection notes, legal counsel inputs, or verification status..." class="w-full text-xs p-2.5 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
               <button type="submit" class="w-full py-2 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 rounded-lg text-xs font-semibold text-on-surface flex items-center justify-center gap-1.5">
                 <span class="material-symbols-outlined text-[14px]">save</span>
-                <span>Save Note</span>
+                <span>${t('officer.saveNote', 'Record Internal Note')}</span>
               </button>
             </form>
           </div>
@@ -462,7 +466,7 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
               <h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px] text-primary">history</span>
-                <span>Audit Trail (${events.length})</span>
+                <span>${t('officer.auditTrail', 'Lifecycle Audit Trail')} (${events.length})</span>
               </h2>
             </div>
 

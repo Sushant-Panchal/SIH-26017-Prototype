@@ -45,6 +45,7 @@ class I18nManager {
 
   setLanguage(langCode) {
     if (!SUPPORTED_LANGUAGES[langCode]) return;
+    if (this.currentLanguage === langCode) return;
     this.currentLanguage = langCode;
     try {
       if (typeof localStorage !== 'undefined') {

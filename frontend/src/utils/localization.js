@@ -193,3 +193,31 @@ function normalizeTextToKey(text) {
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '');
 }
+
+/**
+ * Translates case lifecycle status codes into the active language.
+ * e.g. "under_review" -> "समीक्षाधीन" (Hindi) / "Under Review" (English)
+ * @param {string} status
+ * @returns {string}
+ */
+export function getLocalizedCaseStatus(status) {
+  if (!status) return '';
+  const key = `caseStatus.${String(status).toLowerCase()}`;
+  const translated = t(key);
+  if (translated && translated !== key) return translated;
+  return String(status).replace(/_/g, ' ').toUpperCase();
+}
+
+/**
+ * Translates grievance categories into the active language.
+ * e.g. "compensation_dispute" -> "मुआवजा विवाद" (Hindi) / "Compensation Dispute" (English)
+ * @param {string} category
+ * @returns {string}
+ */
+export function getLocalizedCategory(category) {
+  if (!category) return '';
+  const key = `categories.${String(category).toLowerCase()}`;
+  const translated = t(key);
+  if (translated && translated !== key) return translated;
+  return String(category).replace(/_/g, ' ').toUpperCase();
+}

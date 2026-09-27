@@ -15,7 +15,7 @@ import { renderInfoButton } from '../utils/infoModal.js';
 import { getLocalizedStage } from '../utils/localization.js';
 import { i18n, t } from '../i18n/index.js';
 
-export function renderProjectsView(container, onNavigateToAssessment, onNavigateToAudit) {
+export function renderProjectsView(container, onNavigateToAssessment, onNavigateToAudit, savedState = null) {
   container.innerHTML = `
     <div class="px-margin-desktop py-space-xl flex flex-col gap-space-lg w-full">
       <!-- Header -->
@@ -147,6 +147,18 @@ export function renderProjectsView(container, onNavigateToAssessment, onNavigate
   if (micSlot && searchInput) {
     const micBtn = attachMicToInput(searchInput, () => i18n.getLanguage());
     if (micBtn) micSlot.appendChild(micBtn);
+  }
+
+  if (savedState?.inputs) {
+    if (savedState.inputs['directorySearchInput']?.value !== undefined && searchInput) {
+      searchInput.value = savedState.inputs['directorySearchInput'].value;
+    }
+    if (savedState.inputs['filterSector']?.value !== undefined && filterSector) {
+      filterSector.value = savedState.inputs['filterSector'].value;
+    }
+    if (savedState.inputs['filterRisk']?.value !== undefined && filterRisk) {
+      filterRisk.value = savedState.inputs['filterRisk'].value;
+    }
   }
 
   const updateTable = () => {

@@ -62,7 +62,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                 <span>${t('dashboard.nipCorridorPortfolio', 'National Corridor Portfolio Benchmark (142 NIP Projects)')}</span>
               </span>
               <span class="text-[10px] text-on-surface-variant font-medium bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30">
-                Institutional ML Baseline
+                ${t('dashboard.institutionalBaseline', 'Institutional ML Baseline')}
               </span>
             </div>
 
@@ -170,7 +170,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                     <h3 class="font-headline-sm text-sm sm:text-base font-bold text-on-surface">${t('dashboard.caseMatrixTitle', 'Citizen Grievance & Case Intelligence Matrix')}</h3>
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span>Live Ledger</span>
+                      <span>${t('dashboard.liveLedger', 'Live Ledger')}</span>
                     </span>
                   </div>
                   <span class="text-xs text-on-surface-variant">${t('dashboard.caseMatrixSub', 'Shared persistence layer bridging citizen grievances, document requests, and officer intervention')}</span>
@@ -186,27 +186,27 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
-                <span class="text-[10px] font-bold text-on-surface-variant uppercase block">Total Cases</span>
+                <span class="text-[10px] font-bold text-on-surface-variant uppercase block">${t('dashboard.dashTotalCases', 'Total Cases')}</span>
                 <div class="text-xl font-bold font-tabular-data text-on-surface mt-0.5" id="dashMetricTotal">-</div>
               </div>
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
-                <span class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase block">New Grievances</span>
+                <span class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase block">${t('dashboard.dashNewGrievances', 'New Grievances')}</span>
                 <div class="text-xl font-bold font-tabular-data text-blue-700 dark:text-blue-300 mt-0.5" id="dashMetricNew">-</div>
               </div>
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
-                <span class="text-[10px] font-bold text-error uppercase block">High Risk (AI)</span>
+                <span class="text-[10px] font-bold text-error uppercase block">${t('dashboard.dashHighRisk', 'High Risk (AI)')}</span>
                 <div class="text-xl font-bold font-tabular-data text-error mt-0.5" id="dashMetricHighRisk">-</div>
               </div>
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
-                <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase block">Docs Required</span>
+                <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase block">${t('dashboard.dashDocsRequired', 'Docs Required')}</span>
                 <div class="text-xl font-bold font-tabular-data text-amber-700 dark:text-amber-300 mt-0.5" id="dashMetricDocs">-</div>
               </div>
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
-                <span class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase block">Escalated</span>
+                <span class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase block">${t('dashboard.dashEscalated', 'Escalated')}</span>
                 <div class="text-xl font-bold font-tabular-data text-purple-700 dark:text-purple-300 mt-0.5" id="dashMetricEscalated">-</div>
               </div>
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
-                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">Resolved</span>
+                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">${t('dashboard.dashResolved', 'Resolved')}</span>
                 <div class="text-xl font-bold font-tabular-data text-emerald-700 dark:text-emerald-300 mt-0.5" id="dashMetricResolved">-</div>
               </div>
             </div>
@@ -497,8 +497,8 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
       if (errSlot) {
         errSlot.innerHTML = `
           <div class="flex items-center justify-between text-xs text-on-surface-variant bg-surface-container-high/50 px-3 py-1.5 rounded-lg border border-outline-variant/30">
-            <span>Unable to refresh live case metrics right now.</span>
-            <button id="retryCaseMetricsBtn" class="text-primary font-semibold hover:underline">Retry</button>
+            <span>${t('dashboard.unableLoadMetrics', 'Unable to refresh live case metrics right now.')}</span>
+            <button id="retryCaseMetricsBtn" class="text-primary font-semibold hover:underline">${t('common.retry', 'Retry')}</button>
           </div>
         `;
         container.querySelector('#retryCaseMetricsBtn')?.addEventListener('click', loadCaseMetrics);

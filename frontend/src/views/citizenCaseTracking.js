@@ -11,8 +11,9 @@ import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
 import { realtimeService } from '../api/realtime.js';
 import { showToast } from '../utils/toast.js';
+import { getLocalizedCaseStatus, getLocalizedCategory } from '../utils/localization.js';
 
-export async function renderCitizenCaseTrackingView(container) {
+export async function renderCitizenCaseTrackingView(container, savedState = null) {
   if (container._cleanupRealtime) {
     container._cleanupRealtime();
     container._cleanupRealtime = null;
@@ -89,7 +90,7 @@ export async function renderCitizenCaseTrackingView(container) {
           <div id="citizenCasesNavList" class="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
             <div class="py-8 text-center text-on-surface-variant text-xs">
               <span class="animate-spin inline-block mr-1 material-symbols-outlined text-[16px]">progress_activity</span>
-              Loading cases...
+              ${t('common.loadingCases', 'Loading cases...')}
             </div>
           </div>
         </div>
@@ -98,7 +99,7 @@ export async function renderCitizenCaseTrackingView(container) {
         <div class="lg:col-span-8 space-y-5" id="caseDetailMainArea">
           <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-12 text-center text-on-surface-variant">
             <span class="material-symbols-outlined text-[48px] text-primary/30">manage_search</span>
-            <div class="font-medium text-sm mt-2">Select a case from the list to track its real-time progress</div>
+            <div class="font-medium text-sm mt-2">${t('citizen.selectCaseHint', 'Select a case from the list to track its real-time progress')}</div>
           </div>
         </div>
       </div>
@@ -123,7 +124,7 @@ async function loadCitizenCasesTracker(userId, activeCaseId) {
       if (listContainer) {
         listContainer.innerHTML = `
           <div class="py-8 text-center text-on-surface-variant text-xs">
-            No complaints found.
+            ${t('citizen.noComplaintsFound', 'No complaints found.')}
           </div>
         `;
       }
@@ -161,10 +162,10 @@ async function loadCitizenCasesTracker(userId, activeCaseId) {
               c.status === 'documents_required' ? 'bg-rose-500/20 text-rose-800 dark:text-rose-300' :
               'bg-surface-container text-on-surface'
             }">
-              ${c.status.replace('_', ' ')}
+              ${getLocalizedCaseStatus(c.status)}
             </span>
           </div>
-          <div class="text-[11px] truncate opacity-90">${c.category.replace(/_/g, ' ').toUpperCase()}</div>
+          <div class="text-[11px] truncate opacity-90">${getLocalizedCategory(c.category)}</div>
           <div class="text-[10px] opacity-75 mt-1 font-tabular-data">${new Date(c.created_at).toLocaleDateString()}</div>
         </button>
       `;
@@ -191,7 +192,7 @@ async function loadCitizenCasesTracker(userId, activeCaseId) {
           <p class="text-xs text-on-surface-variant max-w-sm mx-auto">Please check your connection and try again.</p>
           <button id="retryCitizenTrackerBtn" type="button" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-semibold hover:opacity-95 shadow-sm inline-flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[16px]">refresh</span>
-            <span>Retry</span>
+            <span>${t('common.retry', 'Retry')}</span>
           </button>
         </div>
       `;
@@ -218,25 +219,25 @@ async function renderCaseDetailView(caseItem, container) {
               caseItem.status === 'documents_required' ? 'bg-rose-600 text-white animate-pulse' :
               'bg-primary-container text-on-primary'
             }">
-              ${caseItem.status.replace(/_/g, ' ')}
+              ${getLocalizedCaseStatus(caseItem.status)}
             </span>
             ${caseItem.priority === 'high' || caseItem.priority === 'critical' ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-error/15 text-error uppercase">${caseItem.priority} Urgency</span>` : ''}
           </div>
           <div class="text-xs text-on-surface-variant mt-1">
-            Category: <strong class="text-on-surface capitalize">${caseItem.category.replace(/_/g, ' ')}</strong>
+            ${t('citizen.fieldCategory', 'Category')}: <strong class="text-on-surface capitalize">${getLocalizedCategory(caseItem.category)}</strong>
             • Land ID: <strong class="text-on-surface">${caseItem.land_id}</strong>
           </div>
         </div>
 
         <div class="text-right text-xs">
-          <span class="text-on-surface-variant block">Assigned Officer</span>
+          <span class="text-on-surface-variant block">${t('citizen.assignedOfficer', 'Assigned Officer')}</span>
           <span class="font-bold text-on-surface">${caseItem.assigned_officer_id || 'Awaiting SLAO Assignment'}</span>
         </div>
       </div>
 
       <!-- Description Block -->
       <div class="text-xs bg-surface-container-lowest p-3.5 rounded-lg border border-outline-variant/30 space-y-1">
-        <span class="font-bold text-on-surface block text-[11px] uppercase tracking-wider text-primary">Declared Grievance</span>
+        <span class="font-bold text-on-surface block text-[11px] uppercase tracking-wider text-primary">${t('citizen.declaredGrievance', 'Declared Grievance')}</span>
         <p class="text-on-surface-variant leading-relaxed">${caseItem.description}</p>
       </div>
 
@@ -260,7 +261,7 @@ async function renderCaseDetailView(caseItem, container) {
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
         <span class="font-bold text-xs uppercase tracking-wider text-on-surface flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-primary">folder</span>
-          <span>Submitted Case Documents</span>
+          <span>${t('citizen.officialSupportingDocs', 'Submitted Case Documents')}</span>
         </span>
         <span id="caseDocsCountBadge" class="text-xs font-semibold text-on-surface-variant font-tabular-data">0 documents</span>
       </div>
@@ -275,7 +276,7 @@ async function renderCaseDetailView(caseItem, container) {
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2">
         <h3 class="font-headline-sm text-base font-bold text-on-surface flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[20px]">timeline</span>
-          <span>Official Case Lifecycle Timeline</span>
+          <span>${t('citizen.caseProgressionTimeline', 'Official Case Lifecycle Timeline')}</span>
         </h3>
         <span class="text-[11px] text-on-surface-variant">Append-only audit trail</span>
       </div>
@@ -474,7 +475,7 @@ function renderCitizenDocumentUploadCard(caseId) {
         <div class="flex items-end">
           <button type="submit" id="respSubmitBtn" class="w-full py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors shadow-sm flex items-center justify-center gap-1.5">
             <span class="material-symbols-outlined text-[16px]">upload_file</span>
-            <span>Upload Document</span>
+            <span>${t('citizen.uploadDocBtn', 'Upload Document')}</span>
           </button>
         </div>
       </form>

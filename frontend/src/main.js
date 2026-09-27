@@ -340,6 +340,15 @@ class BhoomiSakhaApp {
 
     updateUI(i18n.getLanguage());
 
+    // Subscribe to i18n changes so language selection immediately updates shell + active view
+    i18n.subscribe((lang) => {
+      updateUI(lang);
+      this.renderPortalNavigation();
+      this.updateNavState(this.currentView);
+      this.renderRoleIndicator();
+      this.rerenderCurrentView();
+    });
+
     if (toggleBtn && menu) {
       toggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -358,11 +367,10 @@ class BhoomiSakhaApp {
       optionBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           const selected = btn.getAttribute('data-lang');
-          i18n.setLanguage(selected);
-          updateUI(selected);
           menu.classList.add('hidden');
           toggleBtn.setAttribute('aria-expanded', 'false');
           toggleBtn.focus();
+          i18n.setLanguage(selected);
         });
       });
 
@@ -1047,6 +1055,202 @@ class BhoomiSakhaApp {
         );
         break;
     }
+  }
+
+  /**
+   * Captures active form values, focus, scroll position, and view state
+   * before re-rendering so language switching does not disrupt user workflows.
+   */
+  captureContainerState(container) {
+    if (!container) return null;
+
+    const state = {
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      activeElementId: document.activeElement ? document.activeElement.id : null,
+      inputs: {},
+      currentPage: container._officerCasesState?.currentPage || 1,
+    };
+
+    const formElements = container.querySelectorAll('input, select, textarea');
+    formElements.forEach((el, index) => {
+      const key = el.id || (el.name ? `name:${el.name}` : `index:${index}`);
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        state.inputs[key] = {
+          type: el.type,
+          checked: el.checked,
+          value: el.value,
+        };
+      } else if (el.type !== 'file') {
+        state.inputs[key] = {
+          type: el.type,
+          value: el.value,
+        };
+        if (document.activeElement === el) {
+          state.selectionStart = el.selectionStart;
+          state.selectionEnd = el.selectionEnd;
+        }
+      }
+    });
+
+    return state;
+  }
+
+  /**
+   * Restores user input values, focus, and scroll position after re-rendering.
+   */
+  restoreContainerState(container, state) {
+    if (!container || !state) return;
+
+    if (state.inputs) {
+      Object.entries(state.inputs).forEach(([key, data]) => {
+        let el = null;
+        if (key.startsWith('name:')) {
+          el = container.querySelector(`[name="${key.slice(5)}"]`);
+        } else if (key.startsWith('index:')) {
+          const idx = parseInt(key.slice(6), 10);
+          const all = container.querySelectorAll('input, select, textarea');
+          el = all[idx];
+        } else {
+          el = document.getElementById(key);
+        }
+
+        if (el) {
+          if (data.type === 'checkbox' || data.type === 'radio') {
+            el.checked = data.checked;
+          } else if (data.type !== 'file' && data.value !== undefined) {
+            el.value = data.value;
+          }
+        }
+      });
+    }
+
+    if (typeof state.scrollY === 'number') {
+      window.scrollTo({
+        left: state.scrollX || 0,
+        top: state.scrollY,
+        behavior: 'instant',
+      });
+    }
+
+    if (state.activeElementId) {
+      const activeEl = document.getElementById(state.activeElementId);
+      if (activeEl) {
+        try {
+          activeEl.focus();
+          if (typeof state.selectionStart === 'number' && activeEl.setSelectionRange) {
+            activeEl.setSelectionRange(state.selectionStart, state.selectionEnd);
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  /**
+   * Re-renders the current view immediately in place when language changes,
+   * preserving user inputs, filters, focus, and scroll position without full reload.
+   */
+  rerenderCurrentView() {
+    if (!this.container) return;
+
+    const savedState = this.captureContainerState(this.container);
+
+    const rawHash = window.location.hash || '';
+    const cleanHash = rawHash.replace(/^#\/?/, '');
+    const [path, queryString] = cleanHash.split('?');
+    const params = new URLSearchParams(queryString || '');
+
+    const isAuth = authService.isAuthenticated();
+
+    if (!isAuth) {
+      if (this.currentView === 'login' || this.currentView === 'register') {
+        this.updateBreadcrumbsForAuth(this.currentView);
+        this.renderLoginViewComponent(this.currentView);
+        this.restoreContainerState(this.container, savedState);
+      }
+      return;
+    }
+
+    switch (this.currentView) {
+      case 'citizen-dashboard':
+        renderCitizenDashboardView(this.container);
+        break;
+
+      case 'citizen-lands':
+        renderCitizenLandView(this.container);
+        break;
+
+      case 'citizen-risk':
+        renderCitizenRiskView(this.container);
+        break;
+
+      case 'citizen-complaint':
+        renderCitizenComplaintView(this.container);
+        break;
+
+      case 'citizen-cases':
+        renderCitizenCaseTrackingView(this.container, savedState);
+        break;
+
+      case 'cases':
+        renderOfficerCasesView(this.container, savedState);
+        break;
+
+      case 'officer-case-workspace':
+        renderOfficerWorkspaceView(this.container, savedState);
+        break;
+
+      case 'notifications':
+        renderNotificationsView(this.container, () => this.updateNotificationBadge());
+        break;
+
+      case 'assessment': {
+        const preset = params.get('preset') || 'medium';
+        renderAssessmentView(this.container, preset);
+        break;
+      }
+
+      case 'projects':
+        renderProjectsView(
+          this.container,
+          (presetKey) => {
+            window.location.hash = `#/assessment?preset=${presetKey}`;
+          },
+          (projectId) => {
+            window.location.hash = `#/audit?id=${projectId}`;
+          },
+          savedState
+        );
+        break;
+
+      case 'audit': {
+        const projectId = params.get('id') || 'BF-NH-2024-09';
+        renderDetailView(
+          this.container,
+          projectId,
+          (presetKey) => {
+            window.location.hash = `#/assessment?preset=${presetKey}`;
+          }
+        );
+        break;
+      }
+
+      case 'dashboard':
+      default:
+        this.currentView = 'dashboard';
+        renderDashboardView(
+          this.container,
+          (presetKey) => {
+            window.location.hash = `#/assessment?preset=${presetKey}`;
+          },
+          (projectId) => {
+            window.location.hash = `#/audit?id=${projectId}`;
+          }
+        );
+        break;
+    }
+
+    this.restoreContainerState(this.container, savedState);
   }
 
   /**
