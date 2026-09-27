@@ -43,6 +43,8 @@ export default {
     "citizenMode": "नागरिक मोड",
     "officerShort": "अधिकारी",
     "citizenShort": "नागरिक",
+    "demoQuickFill": "डेमो भरें",
+    "autoFill": "भरें",
     "officerSignIn": "अधिकारी कमांड साइन इन",
     "citizenSignIn": "नागरिक साइन इन",
     "officerRegister": "अधिकारी खाता पंजीकरण",

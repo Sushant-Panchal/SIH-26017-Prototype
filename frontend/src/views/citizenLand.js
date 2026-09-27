@@ -333,11 +333,11 @@ async function loadCitizenLands(userId, openEditModal) {
     container.innerHTML = `
       <div class="p-8 bg-surface-container-low border border-outline-variant/40 rounded-xl text-center space-y-3">
         <span class="material-symbols-outlined text-[32px] text-amber-500">wifi_off</span>
-        <h3 class="text-sm font-bold text-on-surface">Unable to load land holdings right now</h3>
-        <p class="text-xs text-on-surface-variant max-w-sm mx-auto">Please check your network connection or try again.</p>
+        <h3 class="text-sm font-bold text-on-surface">${t('citizen.unableLoadLands', 'Unable to load land holdings right now')}</h3>
+        <p class="text-xs text-on-surface-variant max-w-sm mx-auto">${t('common.checkConnection', 'Please check your network connection or try again.')}</p>
         <button id="retryCitizenLandsBtn" type="button" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-semibold hover:opacity-95 shadow-sm inline-flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px]">refresh</span>
-          <span>Retry</span>
+          <span>${t('common.retry', 'Retry')}</span>
         </button>
       </div>
     `;

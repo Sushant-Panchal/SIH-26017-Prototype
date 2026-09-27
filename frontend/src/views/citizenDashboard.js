@@ -350,11 +350,11 @@ async function loadCitizenDashboardData(userId) {
       casesListEl.innerHTML = `
         <div class="p-6 bg-surface-container-low border border-outline-variant/40 rounded-xl text-center space-y-3">
           <span class="material-symbols-outlined text-[28px] text-amber-500">wifi_off</span>
-          <div class="font-medium text-xs text-on-surface">Unable to load dashboard records right now.</div>
-          <p class="text-[11px] text-on-surface-variant">Please check your connection or try again.</p>
+          <div class="font-medium text-xs text-on-surface">${t('dashboard.unableLoadMetrics', 'Unable to load dashboard records right now.')}</div>
+          <p class="text-[11px] text-on-surface-variant">${t('common.checkConnection', 'Please check your connection or try again.')}</p>
           <button id="retryCitizenDashboardBtn" type="button" class="px-3.5 py-1.5 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 shadow-sm inline-flex items-center gap-1">
             <span class="material-symbols-outlined text-[14px]">refresh</span>
-            <span>Retry</span>
+            <span>${t('common.retry', 'Retry')}</span>
           </button>
         </div>
       `;

@@ -285,11 +285,11 @@ export async function renderCitizenRiskView(container) {
         placeholder.innerHTML = `
           <div class="py-8 text-center text-on-surface-variant space-y-3">
             <span class="material-symbols-outlined text-[36px] text-amber-500">warning</span>
-            <div class="font-medium text-sm text-on-surface">Unable to complete delay assessment</div>
-            <p class="text-xs max-w-sm mx-auto opacity-80">The prediction engine is temporarily unavailable or timed out. Please try again.</p>
+            <div class="font-medium text-sm text-on-surface">${t('citizen.unableCompleteRisk', 'Unable to complete delay assessment')}</div>
+            <p class="text-xs max-w-sm mx-auto opacity-80">${t('citizen.engineTimeout', 'The prediction engine is temporarily unavailable or timed out. Please try again.')}</p>
             <button id="retryPredictionBtn" type="button" class="px-4 py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 shadow-sm inline-flex items-center gap-1.5">
               <span class="material-symbols-outlined text-[16px]">refresh</span>
-              <span>Retry Assessment</span>
+              <span>${t('common.retry', 'Retry Assessment')}</span>
             </button>
           </div>
         `;

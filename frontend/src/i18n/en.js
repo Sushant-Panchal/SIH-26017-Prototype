@@ -43,6 +43,8 @@ export default {
     "citizenMode": "Citizen Mode",
     "officerShort": "Officer",
     "citizenShort": "Citizen",
+    "demoQuickFill": "Demo Fill",
+    "autoFill": "Fill",
     "officerSignIn": "Officer Command Sign In",
     "citizenSignIn": "Citizen Sign In",
     "officerRegister": "Officer Account Registration",

@@ -256,6 +256,22 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
             </button>
           </div>
 
+          <!-- SIH Presentation Demo Credentials Helper -->
+          <div class="p-3 bg-surface-container-low rounded-xl border border-outline-variant/40 text-[11px] text-on-surface-variant flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="material-symbols-outlined text-[16px] text-secondary">smart_toy</span>
+              <span>${t('auth.demoQuickFill', 'Demo Fill')}:</span>
+              <strong class="text-on-surface font-tabular-data">${currentRole === 'officer' ? 'officer.shinde@gov.in' : 'ramesh.patil@example.com'}</strong>
+            </div>
+            <button 
+              type="button" 
+              id="quickDemoFillBtn" 
+              class="px-2.5 py-1 bg-surface-container hover:bg-primary hover:text-on-primary text-on-surface font-semibold rounded-lg transition-colors text-[10px] uppercase tracking-wider shrink-0 cursor-pointer shadow-xs flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">bolt</span>
+              <span>${t('auth.autoFill', 'Fill')}</span>
+            </button>
+          </div>
+
         </div>
       </div>
     `;
@@ -312,6 +328,27 @@ export function renderLoginView(container, { mode = 'login', initialRole = 'citi
       toggleModeBtn.addEventListener('click', () => {
         syncValuesFromDOM();
         currentMode = currentMode === 'login' ? 'register' : 'login';
+        errorMessage = '';
+        render();
+      });
+    }
+
+    // SIH Demo Quick-Fill credentials handler
+    const quickDemoBtn = container.querySelector('#quickDemoFillBtn');
+    if (quickDemoBtn) {
+      quickDemoBtn.addEventListener('click', () => {
+        if (currentRole === 'officer') {
+          formValues.email = 'officer.shinde@gov.in';
+          formValues.password = 'Bhoomi@2026';
+          formValues.name = 'Smt. Sunita Shinde';
+          formValues.district = 'Pune';
+        } else {
+          formValues.email = 'ramesh.patil@example.com';
+          formValues.password = 'Bhoomi@2026';
+          formValues.name = 'Ramesh Patil';
+          formValues.district = 'Pune';
+          formValues.phone = '+91 9822001122';
+        }
         errorMessage = '';
         render();
       });

@@ -596,10 +596,10 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
     contentEl.innerHTML = `
       <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-8 text-center text-error space-y-3">
         <span class="material-symbols-outlined text-[32px]">error</span>
-        <h2 class="text-base font-bold">Failed to Load Case Dossier</h2>
-        <p class="text-xs text-on-surface-variant">${err.message}</p>
+        <h2 class="text-base font-bold">${t('officer.failedLoadDossier', 'Failed to Load Case Dossier')}</h2>
+        <p class="text-xs text-on-surface-variant">${err.message || t('common.checkConnection', 'Please check your network connection and try again.')}</p>
         <button id="btnRetryWorkspace" class="px-3 py-1.5 bg-primary text-on-primary rounded text-xs font-semibold">
-          Retry
+          ${t('common.retry', 'Retry')}
         </button>
       </div>
     `;
