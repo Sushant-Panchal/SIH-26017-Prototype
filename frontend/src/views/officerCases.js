@@ -241,13 +241,37 @@ async function loadOfficerCasesData(page = 1) {
     if (nextBtn) nextBtn.disabled = res.page >= res.pages;
 
     if (res.items.length === 0) {
+      const hasFilters = Boolean(status || risk || search);
       tableBody.innerHTML = `
         <tr>
           <td colspan="8" class="text-center py-12 text-on-surface-variant">
-            No cases match the selected filters.
+            <div class="space-y-2">
+              <span class="material-symbols-outlined text-[36px] text-primary/40">${hasFilters ? 'filter_list_off' : 'verified'}</span>
+              <div class="font-bold text-sm text-on-surface">
+                ${hasFilters ? 'No cases match the selected filter criteria.' : "You're all caught up. No active cases require attention."}
+              </div>
+              <p class="text-xs text-on-surface-variant max-w-sm mx-auto">
+                ${hasFilters ? 'Try adjusting your search terms, status filters, or risk tiers.' : 'New citizen grievances and document submissions will appear here in real time.'}
+              </p>
+              ${hasFilters ? `
+                <button id="resetOfficerFiltersBtn" type="button" class="mt-2 px-3 py-1.5 bg-surface-container border border-outline-variant/60 rounded-lg text-xs font-semibold text-on-surface hover:bg-surface-container-high transition-colors inline-flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">clear_all</span>
+                  <span>Reset All Filters</span>
+                </button>
+              ` : ''}
+            </div>
           </td>
         </tr>
       `;
+      const resetBtn = tableBody.querySelector('#resetOfficerFiltersBtn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          if (document.getElementById('filterStatus')) document.getElementById('filterStatus').value = '';
+          if (document.getElementById('filterRisk')) document.getElementById('filterRisk').value = '';
+          if (document.getElementById('officerSearchInput')) document.getElementById('officerSearchInput').value = '';
+          loadOfficerCasesData(1);
+        });
+      }
       return;
     }
 
@@ -317,12 +341,25 @@ async function loadOfficerCasesData(page = 1) {
     `).join('');
 
   } catch (err) {
+    console.warn('[OfficerCases] Failed to load cases:', err);
     tableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="text-center py-8 text-error">
-          Error loading case queue: ${err.message}
+        <td colspan="8" class="text-center py-10 text-on-surface-variant">
+          <div class="space-y-2">
+            <span class="material-symbols-outlined text-[32px] text-amber-500">wifi_off</span>
+            <div class="text-xs font-semibold text-on-surface">Unable to load the case queue right now.</div>
+            <p class="text-[11px] text-on-surface-variant">Please check your network connection or try again.</p>
+            <button id="retryOfficerCasesBtn" type="button" class="px-3.5 py-1.5 bg-primary text-on-primary rounded-lg text-xs font-semibold hover:opacity-95 shadow-xs inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">refresh</span>
+              <span>Retry</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;
+    const retryBtn = tableBody.querySelector('#retryOfficerCasesBtn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => loadOfficerCasesData(page));
+    }
   }
 }

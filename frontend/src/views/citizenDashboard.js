@@ -226,34 +226,28 @@ async function loadCitizenDashboardData(userId) {
   const bannerEl = document.getElementById('citizenActionBanner');
 
   try {
-    // 1. Fetch user lands
-    let lands = [];
-    try {
-      lands = await caseService.getUserLands(userId);
-    } catch (_) {
-      lands = [];
-    }
-    if (landsCountEl) landsCountEl.textContent = lands.length;
+    // 1. Fetch user lands & cases in parallel
+    const [landsRes, casesRes] = await Promise.allSettled([
+      caseService.getUserLands(userId),
+      caseService.getUserCases(userId),
+    ]);
 
-    // 2. Fetch user cases
-    let cases = [];
-    try {
-      cases = await caseService.getUserCases(userId);
-    } catch (_) {
-      cases = [];
-    }
+    const lands = landsRes.status === 'fulfilled' && Array.isArray(landsRes.value) ? landsRes.value : [];
+    const cases = casesRes.status === 'fulfilled' && Array.isArray(casesRes.value) ? casesRes.value : [];
+
+    if (landsCountEl) landsCountEl.textContent = lands.length;
 
     if (casesCountEl) {
       const activeCount = cases.filter(c => !['resolved', 'closed', 'rejected'].includes(c.status)).length;
       casesCountEl.textContent = activeCount;
     }
 
-    // 3. Check for pending document requests
+    // Check for pending document requests
     const docReqCases = cases.filter(c => c.status === 'documents_required');
     if (pendingActionsEl) pendingActionsEl.textContent = docReqCases.length;
 
     if (docReqCases.length > 0 && bannerEl) {
-      bannerEl.className = 'bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200';
+      bannerEl.className = 'bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200 animate-fade-in';
       bannerEl.innerHTML = `
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[24px]">notification_important</span>
@@ -266,9 +260,12 @@ async function loadCitizenDashboardData(userId) {
           ${t('citizen.uploadNowBtn', 'Respond & Upload')}
         </a>
       `;
+    } else if (bannerEl) {
+      bannerEl.className = 'hidden';
+      bannerEl.innerHTML = '';
     }
 
-    // 4. Determine latest risk indicator
+    // Determine latest risk indicator
     if (latestRiskEl) {
       const assessed = cases.find(c => c.risk_probability !== null && c.risk_probability !== undefined);
       if (assessed) {
@@ -281,7 +278,12 @@ async function loadCitizenDashboardData(userId) {
       }
     }
 
-    // 5. Render recent cases list
+    // If both failed to load, show retryable error
+    if (landsRes.status === 'rejected' && casesRes.status === 'rejected') {
+      throw new Error('Unable to load your citizen dashboard data right now.');
+    }
+
+    // Render recent cases list
     if (casesListEl) {
       if (cases.length === 0) {
         casesListEl.innerHTML = `
@@ -289,7 +291,7 @@ async function loadCitizenDashboardData(userId) {
             <span class="material-symbols-outlined text-[36px] opacity-40">assignment_turned_in</span>
             <div class="font-medium text-sm mt-1">${t('citizen.noCases', 'No active cases filed yet.')}</div>
             <p class="text-xs opacity-80 mt-0.5">${t('citizen.noCasesSub', 'If you have an issue with land compensation or survey measurement, you can file a complaint directly.')}</p>
-            <a href="#/citizen-complaint" class="inline-block mt-3 px-3 py-1.5 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95">
+            <a href="#/citizen-complaint" class="inline-block mt-3 px-3.5 py-1.5 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 shadow-sm">
               ${t('citizen.fileGrievanceBtn', 'File First Complaint')}
             </a>
           </div>
@@ -319,7 +321,7 @@ async function loadCitizenDashboardData(userId) {
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-tabular-data font-bold text-sm text-on-surface">${c.case_id}</span>
                   <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${statusColors[c.status] || 'bg-surface-container text-on-surface'}">
-                    ${c.status.replace('_', ' ')}
+                    ${c.status.replace(/_/g, ' ')}
                   </span>
                   ${c.priority === 'high' || c.priority === 'critical' ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-error/10 text-error uppercase">${c.priority}</span>` : ''}
                 </div>
@@ -343,13 +345,31 @@ async function loadCitizenDashboardData(userId) {
       }
     }
   } catch (err) {
-    console.error('[CitizenDashboard] Error loading dashboard data:', err);
+    console.warn('[CitizenDashboard] Unable to load data:', err);
     if (casesListEl) {
       casesListEl.innerHTML = `
-        <div class="text-center py-6 text-error text-xs">
-          ${t('common.errorLoading', 'Failed to load case data. Please try again.')}
+        <div class="p-6 bg-surface-container-low border border-outline-variant/40 rounded-xl text-center space-y-3">
+          <span class="material-symbols-outlined text-[28px] text-amber-500">wifi_off</span>
+          <div class="font-medium text-xs text-on-surface">Unable to load dashboard records right now.</div>
+          <p class="text-[11px] text-on-surface-variant">Please check your connection or try again.</p>
+          <button id="retryCitizenDashboardBtn" type="button" class="px-3.5 py-1.5 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 shadow-sm inline-flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">refresh</span>
+            <span>Retry</span>
+          </button>
         </div>
       `;
+      const retryBtn = casesListEl.querySelector('#retryCitizenDashboardBtn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          casesListEl.innerHTML = `
+            <div class="py-8 text-center text-on-surface-variant text-sm">
+              <span class="animate-spin inline-block mr-2 material-symbols-outlined text-[18px]">progress_activity</span>
+              ${t('common.loading', 'Loading case records...')}
+            </div>
+          `;
+          loadCitizenDashboardData(userId);
+        });
+      }
     }
   }
 }

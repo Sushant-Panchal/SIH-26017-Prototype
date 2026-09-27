@@ -26,6 +26,7 @@ import { themeManager } from './utils/theme.js';
 import { initInfoSystem } from './utils/infoModal.js';
 import { i18n, t } from './i18n/index.js';
 import { realtimeService } from './api/realtime.js';
+import { showToast } from './utils/toast.js';
 
 // ============================================================
 // ROUTE CLASSIFICATIONS & ROLE DEFINITIONS
@@ -1161,27 +1162,7 @@ class BhoomiSakhaApp {
   }
 
   showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) return;
-
-    const toast = document.createElement('div');
-    const bg = type === 'success' ? 'bg-primary-container text-on-primary border-secondary' : 'bg-amber-100 text-amber-950 border-amber-400';
-    toast.className = `${bg} px-4 py-3 rounded-lg shadow-lg border text-sm max-w-md pointer-events-auto flex items-start gap-2 transition-all duration-300 transform translate-y-2 opacity-0`;
-    
-    toast.innerHTML = `
-      <span class="material-symbols-outlined text-[18px] text-secondary-container mt-0.5">info</span>
-      <span class="flex-1">${message}</span>
-    `;
-    toastContainer.appendChild(toast);
-
-    requestAnimationFrame(() => {
-      toast.classList.remove('translate-y-2', 'opacity-0');
-    });
-
-    setTimeout(() => {
-      toast.classList.add('opacity-0', 'translate-y-2');
-      setTimeout(() => toast.remove(), 300);
-    }, 4500);
+    showToast(message, type);
   }
 }
 

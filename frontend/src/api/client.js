@@ -29,6 +29,32 @@ export class ApiError extends Error {
   }
 }
 
+function sanitizeErrorMessage(message, status) {
+  if (!message || typeof message !== 'string') {
+    return 'Unable to process your request right now. Please try again.';
+  }
+
+  const lower = message.toLowerCase();
+  const technicalKeywords = [
+    'traceback (most recent call last)',
+    'pymongo',
+    'mongodb',
+    'bson.',
+    'objectid',
+    'uvicorn',
+    'internal server error',
+    'syntaxerror',
+    'database error',
+  ];
+
+  const hasTechnicalDump = technicalKeywords.some(kw => lower.includes(kw));
+  if (hasTechnicalDump || (status && status >= 500)) {
+    return 'An internal server error occurred while processing your request. Please try again shortly.';
+  }
+
+  return message;
+}
+
 /**
  * Execute HTTP request with timeout and structured error handling.
  */
@@ -90,7 +116,7 @@ async function request(endpoint, options = {}) {
             errorDetail = data.message;
           }
         }
-        throw new ApiError(errorDetail, response.status, data);
+        throw new ApiError(sanitizeErrorMessage(errorDetail, response.status), response.status, data);
       }
 
       return data;

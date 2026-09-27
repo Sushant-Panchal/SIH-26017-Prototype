@@ -15,6 +15,7 @@ import { attachMicToInput } from '../utils/stt.js';
 import { renderInfoButton } from '../utils/infoModal.js';
 import { i18n, t } from '../i18n/index.js';
 import { caseService } from '../api/cases.js';
+import { showToast } from '../utils/toast.js';
 
 export function renderDashboardView(container, onNavigateToAssessment, onNavigateToAudit) {
   container.innerHTML = `
@@ -54,7 +55,18 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
           </div>
 
           <!-- Top Governance KPI Row -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold tracking-wider uppercase text-on-surface-variant flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-primary"></span>
+                <span>${t('dashboard.nipCorridorPortfolio', 'National Corridor Portfolio Benchmark (142 NIP Projects)')}</span>
+              </span>
+              <span class="text-[10px] text-on-surface-variant font-medium bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30">
+                Institutional ML Baseline
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
             
             <!-- Metric 1: Total Projects -->
             <div class="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between group hover:shadow-md transition-shadow border border-outline-variant/30">
@@ -143,6 +155,7 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
               </div>
             </div>
 
+            </div>
           </div>
 
           <!-- Case Intelligence & Citizen Grievance Matrix (Phase 14) -->
@@ -153,7 +166,13 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                   <span class="material-symbols-outlined text-[18px]">gavel</span>
                 </span>
                 <div>
-                  <h3 class="font-headline-sm text-sm sm:text-base font-bold text-on-surface">${t('dashboard.caseMatrixTitle', 'Citizen Grievance & Case Intelligence Matrix')}</h3>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-headline-sm text-sm sm:text-base font-bold text-on-surface">${t('dashboard.caseMatrixTitle', 'Citizen Grievance & Case Intelligence Matrix')}</h3>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Live Ledger</span>
+                    </span>
+                  </div>
                   <span class="text-xs text-on-surface-variant">${t('dashboard.caseMatrixSub', 'Shared persistence layer bridging citizen grievances, document requests, and officer intervention')}</span>
                 </div>
               </div>
@@ -162,6 +181,8 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
                 <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
               </a>
             </div>
+
+            <div id="caseMetricsErrorSlot"></div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
               <div class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-3">
@@ -451,25 +472,40 @@ export function renderDashboardView(container, onNavigateToAssessment, onNavigat
   if (jumpBtn && onNavigateToAssessment) jumpBtn.addEventListener('click', () => onNavigateToAssessment('high'));
   if (nationalScanBtn) {
     nationalScanBtn.addEventListener('click', () => {
-      alert(t('dashboard.scanCompleted', 'National Scan Completed: 29 High/Critical risks identified.'));
+      showToast(t('dashboard.scanCompleted', 'National Scan Completed: 29 High/Critical risks identified across 142 corridor parcels.'), 'info');
     });
   }
 
   // Live Case Intelligence Metrics Feed (Phase 14)
-  caseService.getMetricsSummary().then(m => {
-    const setM = (id, val) => {
-      const el = container.querySelector(id);
-      if (el) el.textContent = val !== undefined ? val : '0';
-    };
-    setM('#dashMetricTotal', m.total_cases);
-    setM('#dashMetricNew', m.new_cases);
-    setM('#dashMetricHighRisk', m.high_risk);
-    setM('#dashMetricDocs', m.documents_required);
-    setM('#dashMetricEscalated', m.escalated);
-    setM('#dashMetricResolved', m.resolved);
-  }).catch(e => {
-    console.warn('Could not load case metrics:', e);
-  });
+  const loadCaseMetrics = () => {
+    caseService.getMetricsSummary().then(m => {
+      const setM = (id, val) => {
+        const el = container.querySelector(id);
+        if (el) el.textContent = val !== undefined ? val : '0';
+      };
+      setM('#dashMetricTotal', m.total_cases);
+      setM('#dashMetricNew', m.new_cases);
+      setM('#dashMetricHighRisk', m.high_risk);
+      setM('#dashMetricDocs', m.documents_required);
+      setM('#dashMetricEscalated', m.escalated);
+      setM('#dashMetricResolved', m.resolved);
+      const errSlot = container.querySelector('#caseMetricsErrorSlot');
+      if (errSlot) errSlot.innerHTML = '';
+    }).catch(e => {
+      console.warn('Could not load case metrics:', e);
+      const errSlot = container.querySelector('#caseMetricsErrorSlot');
+      if (errSlot) {
+        errSlot.innerHTML = `
+          <div class="flex items-center justify-between text-xs text-on-surface-variant bg-surface-container-high/50 px-3 py-1.5 rounded-lg border border-outline-variant/30">
+            <span>Unable to refresh live case metrics right now.</span>
+            <button id="retryCaseMetricsBtn" class="text-primary font-semibold hover:underline">Retry</button>
+          </div>
+        `;
+        container.querySelector('#retryCaseMetricsBtn')?.addEventListener('click', loadCaseMetrics);
+      }
+    });
+  };
+  loadCaseMetrics();
 
   attachRowEvents(container, onNavigateToAssessment, onNavigateToAudit);
 }

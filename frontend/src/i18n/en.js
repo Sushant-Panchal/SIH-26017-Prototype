@@ -42,7 +42,27 @@ export default {
     "officerMode": "Officer Mode",
     "citizenMode": "Citizen Mode",
     "officerShort": "Officer",
-    "citizenShort": "Citizen"
+    "citizenShort": "Citizen",
+    "officerSignIn": "Officer Command Sign In",
+    "citizenSignIn": "Citizen Sign In",
+    "officerRegister": "Officer Account Registration",
+    "citizenRegister": "Create Citizen Account",
+    "officerAccessDenied": "Unauthorized: Officer portal access denied for citizen accounts.",
+    "registerTab": "Registration",
+    "loginTab": "Sign In",
+    "citizenAccessDenied": "Unauthorized: Citizen-only portal route. Use Officer Case Queue.",
+    "citizenTrackingGatewayTitle": "Sign In to Track Acquisition Grievances",
+    "citizenTrackingGatewayMsg": "Access real-time case progression, respond to officer document requests, and review verified status updates under your account.",
+    "citizenComplaintGatewayTitle": "Sign In to File Land Acquisition Grievance",
+    "citizenComplaintGatewayMsg": "Authenticated identity is required to generate statutory case IDs, assign revenue officers, and track dispute timelines.",
+    "citizenGatewayTitle": "Citizen Portal Sign In Required",
+    "citizenGatewayMsg": "Please sign in or register your citizen account to manage your land holdings, check predictive delay risks, and view your grievance status.",
+    "citizenLandGatewayTitle": "Sign In to Access Your Land Holdings",
+    "citizenLandGatewayMsg": "Access cadastral parcels, view compensation records, and register survey numbers under your verified account.",
+    "officerGatewayTitle": "Revenue Officer Sign In Required",
+    "officerGatewayMsg": "Official administrative credentials required to inspect citizen grievance dossiers, verify revenue documents, and manage statutory case queues.",
+    "officerWorkspaceGatewayTitle": "Revenue Officer Sign In Required",
+    "officerWorkspaceGatewayMsg": "Official authorization is required to access confidential dossiers, verify documents, and issue statutory case determinations."
   },
   "header": {
     "platformName": "Bhoomi Sakha",
@@ -77,7 +97,11 @@ export default {
     "citizenLands": "My Land",
     "citizenRisk": "Check Delay Risk",
     "citizenComplaint": "File Grievance",
-    "citizenCases": "My Cases"
+    "citizenCases": "My Cases",
+    "myCases": "My Cases Tracker",
+    "fileComplaint": "File Grievance",
+    "myLand": "My Land Records",
+    "checkDelayRisk": "Check Delay Risk"
   },
   "views": {
     "dashboard": "National Cadastral Matrix (Overview)",
@@ -192,7 +216,11 @@ export default {
     "colAction": "Action",
     "assessBtn": "Assess",
     "auditBtn": "Audit",
-    "noMatchingProjects": "No matching projects found."
+    "noMatchingProjects": "No matching projects found.",
+    "nipCorridorPortfolio": "National Corridor Portfolio Benchmark (142 NIP Projects)",
+    "caseMatrixTitle": "Citizen Grievance & Case Intelligence Matrix",
+    "caseMatrixSub": "Shared persistence layer bridging citizen grievances, document requests, and officer intervention",
+    "openCaseQueue": "Open Case Queue"
   },
   "assessment": {
     "title": "Assess Project Risk",
@@ -392,7 +420,8 @@ export default {
     "modalDirectives": "2. ADMINISTRATIVE DIRECTIVES TO COMPETENT AUTHORITIES (CALA):",
     "modalDirectiveA": "a) Joint Site Inspection: The Special Land Acquisition Officer (SLAO) and Sub-Divisional Magistrate (SDM) shall initiate immediate expedited joint site inspection for remaining pending parcels.",
     "modalDirectiveB": "b) DBT Escrow Acceleration: Direct Benefit Transfer (DBT) reconciliation and compensation award payouts shall be expedited within a 14-day statutory timeline to prevent critical milestone slippage.",
-    "modalDirectiveC": "c) Lok Adalat Conciliation: Outstanding objections and title verification issues must be scheduled for expedited hearing during the upcoming weekly revenue Lok Adalat."
+    "modalDirectiveC": "c) Lok Adalat Conciliation: Outstanding objections and title verification issues must be scheduled for expedited hearing during the upcoming weekly revenue Lok Adalat.",
+    "predictedRisk": "Predicted Risk"
   },
   "notifications": {
     "title": "System Notifications",
@@ -403,12 +432,26 @@ export default {
     "resetDemoAlerts": "Reset Demo Alerts",
     "filterAll": "All",
     "filterUnread": "Unread",
+    "severity": "Severity",
+    "categoriesLabel": "Categories",
+    "categories": {
+      "Risk Alert": "Risk Alert",
+      "Engine": "Engine",
+      "Officer Attention": "Officer Attention",
+      "System": "System"
+    },
+    "readState": "Read State",
     "noNotifications": "No notifications to display",
     "noNotificationsDesc": "There are currently no notifications under this filter.",
     "newTag": "New",
     "markAsUnread": "Mark as Unread",
     "markAsRead": "Mark as Read",
-    "categories": "Categories",
+    "timestamps": {
+      "15 mins ago": "15 mins ago",
+      "1 hour ago": "1 hour ago",
+      "3 hours ago": "3 hours ago",
+      "Today, 09:30 AM": "Today, 09:30 AM"
+    },
     "items": {
       "notif-crit-1": {
         "title": "Critical delay risk detected in current assessment",
@@ -431,8 +474,7 @@ export default {
         "actionLabel": "Projects Directory"
       }
     },
-    "severity": "Severity",
-    "readState": "Read State"
+    "citizenSubtitle": "Official grievance determinations, document requests, and case progression milestones."
   },
   "common": {
     "readAloud": "Read Aloud",
@@ -451,7 +493,11 @@ export default {
     "clickForDetails": "Click ⓘ for detailed explanation",
     "infoFooterNote": "Bhoomi Sakha Institutional Guidance",
     "min": "Min",
-    "max": "Max"
+    "max": "Max",
+    "loading": "Loading case records...",
+    "cancel": "Cancel",
+    "save": "Save Record",
+    "details": "Details"
   },
   "infoCategories": {
     "input_feature": "Input Feature",
@@ -1422,58 +1468,6 @@ export default {
     "default": "Review this factor as part of the project risk assessment.",
     "reducing_risk": "This factor is currently reducing the predicted delay risk."
   },
-  "notifications": {
-    "title": "System Notifications",
-    "unread": "Unread",
-    "allCaughtUp": "All Caught Up",
-    "subtitle": "Application alerts, inference milestones, and statutory threshold notifications generated by Bhoomi Sakha.",
-    "markAllRead": "Mark All Read",
-    "resetDemoAlerts": "Reset Demo Alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "severity": "Severity",
-    "categoriesLabel": "Categories",
-    "categories": {
-      "Risk Alert": "Risk Alert",
-      "Engine": "Engine",
-      "Officer Attention": "Officer Attention",
-      "System": "System"
-    },
-    "readState": "Read State",
-    "noNotifications": "No notifications to display",
-    "noNotificationsDesc": "There are currently no notifications under this filter.",
-    "newTag": "New",
-    "markAsUnread": "Mark as Unread",
-    "markAsRead": "Mark as Read",
-    "timestamps": {
-      "15 mins ago": "15 mins ago",
-      "1 hour ago": "1 hour ago",
-      "3 hours ago": "3 hours ago",
-      "Today, 09:30 AM": "Today, 09:30 AM"
-    },
-    "items": {
-      "notif-crit-1": {
-        "title": "Critical delay risk detected in current assessment",
-        "summary": "Delhi-Amritsar Expressway (Pkg 4) evaluated with 84.6% delay probability requiring urgent Section 19 intervention.",
-        "actionLabel": "Inspect Assessment"
-      },
-      "notif-engine-2": {
-        "title": "Backend prediction engine connected",
-        "summary": "FastAPI service connected with 76 engineered cadastral features ready for live XGBoost inference.",
-        "actionLabel": "View Dashboard"
-      },
-      "notif-atten-3": {
-        "title": "Assessment contains factors requiring officer attention",
-        "summary": "18 high-bottleneck parcel cases in Western Freight Corridor flagged for documentation backlog review.",
-        "actionLabel": "Review Factors"
-      },
-      "notif-stat-4": {
-        "title": "Risk assessment pipeline initialized",
-        "summary": "National Cadastral Matrix synchronized with 142 monitored infrastructure corridors.",
-        "actionLabel": "Projects Directory"
-      }
-    }
-  },
   "realtime": {
     "connected": "Live updates active",
     "reconnecting": "Reconnecting to live updates...",
@@ -1486,6 +1480,101 @@ export default {
     "documentRejected": "Document verification rejected",
     "caseEscalated": "Case escalated to higher authority",
     "caseResolved": "Case resolved successfully"
+  },
+  "citizen": {
+    "portalTitle": "Citizen Portal",
+    "caseTrackerTitle": "Case Status & Lifecycle Tracker",
+    "caseTrackerSub": "Real-time timeline, official status changes, document requests, and officer resolutions.",
+    "fileGrievanceBtn": "File New Grievance",
+    "allMyCases": "My Registered Cases",
+    "fileGrievanceTitle": "File Official Land Grievance",
+    "fileGrievanceSub": "Submit your grievance directly to the Special Land Acquisition Officer. Each case is assigned a permanent tracking ID.",
+    "fieldSelectLandParcel": "Select Land Holding / Parcel",
+    "fieldCategory": "Complaint Category",
+    "fieldPriority": "Citizen Urgency",
+    "fieldDescription": "Detailed Description of Grievance",
+    "descPlaceholder": "Clearly state your survey number, notification date, what award was promised or what discrepancy occurred...",
+    "supportingDocsTitle": "Attach Supporting Document Metadata (Optional)",
+    "submitGrievanceBtn": "Submit Formal Grievance to SLAO",
+    "caseSubmittedTitle": "Grievance Submitted Successfully!",
+    "welcome": "Welcome",
+    "subtitle": "Track your acquisition status, register land holdings, calculate delay risks, and manage grievances directly with authorities.",
+    "addLandBtn": "Add Land",
+    "statLands": "Registered Lands",
+    "statLandsSub": "Cadastral parcels",
+    "statCases": "Active Cases",
+    "statCasesSub": "In process / review",
+    "statDocsPending": "Pending Actions",
+    "statDocsSub": "Officer requests",
+    "statRisk": "Latest Risk",
+    "statRiskSub": "Delay probability",
+    "actionMyLandTitle": "My Land Records",
+    "actionMyLandDesc": "View registered survey numbers, area, village details, and government acquisition status.",
+    "viewRecords": "View Holdings",
+    "actionRiskTitle": "Check Delay Risk",
+    "actionRiskDesc": "Use AI predictive analysis to estimate acquisition delay risks and compensation timeline.",
+    "runEstimate": "Run AI Assessment",
+    "actionComplaintTitle": "File Complaint",
+    "actionComplaintDesc": "Lodge grievances for pending compensation, measurement errors, notice issues, or mutation.",
+    "registerGrievance": "Lodge Grievance",
+    "actionTrackingTitle": "Track My Cases",
+    "actionTrackingDesc": "Real-time case progress, official officer actions, verified documents, and resolution history.",
+    "viewCases": "Open Tracker",
+    "recentCasesTitle": "My Recent Cases & Grievances",
+    "seeAllCases": "View All Cases",
+    "docRequiredBannerTitle": "Action Required: Supporting Document Requested",
+    "docRequiredBannerDesc": "An officer has requested documents for case",
+    "uploadNowBtn": "Respond & Upload",
+    "noCases": "No active cases filed yet.",
+    "noCasesSub": "If you have an issue with land compensation or survey measurement, you can file a complaint directly.",
+    "trackBtn": "Track Case",
+    "landHeader": "Registered Land Parcels",
+    "landSub": "Manage your survey numbers, declared area, and view official notification milestones.",
+    "registerNewLand": "Register New Land Record",
+    "modalAddTitle": "Register Land Record",
+    "fieldState": "State",
+    "fieldDistrict": "District",
+    "fieldTaluka": "Taluka",
+    "fieldVillage": "Village",
+    "fieldSurvey": "Survey / Gat No.",
+    "fieldArea": "Area (Hectares)",
+    "fieldLandType": "Land Type",
+    "fieldAcquisitionStatus": "Acquisition Status",
+    "fieldProject": "Associated Project (Optional)",
+    "landDeclarationNote": "Citizen-Declared Information. Official cadastral boundaries and awards will be cross-checked during officer review.",
+    "modalEditTitle": "Edit Land Record",
+    "noLandsTitle": "No Land Parcels Registered Yet",
+    "noLandsDesc": "Register your agricultural or residential land parcels to monitor acquisition notices, estimate delay risks, and file grievance cases.",
+    "checkRiskBtn": "Check Risk",
+    "landArea": "Declared Area",
+    "registeredOn": "Registration Date",
+    "riskHeader": "AI Land Acquisition Delay-Risk Estimator",
+    "riskSub": "Analyze compensation delays, administrative bottlenecks, and document processing timelines for your parcel.",
+    "disclaimerTitle": "Official Predictive Analytics Notice",
+    "disclaimerText": "This is an estimated predictive assessment based on the information provided and machine-learning models trained on historical land acquisition milestones. It is not a legal determination, guarantee, or statutory court order.",
+    "step1Title": "Parcel & Milestone Information",
+    "selectLand": "Select Registered Land",
+    "chooseLandOrManual": "Choose a registered land or enter manual details",
+    "fieldCurrentStage": "Current Acquisition Stage",
+    "daysSinceNotice": "Days Since Initial Notice",
+    "compensationStatus": "Compensation Status",
+    "compensationReceived": "Have you received compensation?",
+    "activeDisputes": "Active Legal / Court Objections",
+    "docsSubmitted": "Documentation Status",
+    "possessionStatus": "Land Possession",
+    "runModelBtn": "Calculate Estimated Delay Risk",
+    "assessmentResultsTitle": "Predictive Analysis Results",
+    "readyToAssess": "Ready to evaluate delay risk",
+    "readyToAssessSub": "Fill in your parcel details and click Calculate to run the ML model.",
+    "riskProbLabel": "Predicted Probability of Acquisition Delay",
+    "keyFactors": "Primary Delay Risk Factors",
+    "recommendedAction": "Recommended Action for Citizen",
+    "fileGrievanceWithData": "File Official Grievance With This Assessment",
+    "evaluatingRisk": "Running ML Model...",
+    "viewDetails": "View Case"
+  },
+  "officer": {
+    "casesHeader": "Acquisition Grievance & Case Queue",
+    "casesSub": "Monitor citizen complaints, prioritize high-risk acquisition bottlenecks, assign officers, and audit case resolutions."
   }
 };
-

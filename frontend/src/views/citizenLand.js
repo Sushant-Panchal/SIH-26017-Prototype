@@ -9,6 +9,7 @@ import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
+import { showToast } from '../utils/toast.js';
 
 export async function renderCitizenLandView(container) {
   const user = authService.getStoredUser();
@@ -206,25 +207,26 @@ export async function renderCitizenLandView(container) {
       project_id: document.getElementById('landProject').value.trim() || null,
     };
 
-    try {
-      const submitBtn = document.getElementById('saveLandSubmitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
+    const submitBtn = document.getElementById('saveLandSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
 
+    try {
       if (editId) {
         await caseService.updateLand(editId, landData);
+        showToast('Land record updated successfully.', 'success');
       } else {
         await caseService.createLand({
           owner_id: user.user_id,
           ...landData,
         });
+        showToast('Land parcel registered successfully.', 'success');
       }
       closeModal();
       loadCitizenLands(user.user_id, openModal);
     } catch (err) {
-      alert(`Error saving land record: ${err.message}`);
+      showToast(err.message || 'Unable to save land record. Please verify fields and try again.', 'error');
     } finally {
-      const submitBtn = document.getElementById('saveLandSubmitBtn');
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = t('common.save', 'Save Record');
@@ -329,9 +331,27 @@ async function loadCitizenLands(userId, openEditModal) {
 
   } catch (err) {
     container.innerHTML = `
-      <div class="p-6 bg-error/10 border border-error/20 rounded-xl text-center text-error text-xs">
-        Failed to load land holdings: ${err.message}
+      <div class="p-8 bg-surface-container-low border border-outline-variant/40 rounded-xl text-center space-y-3">
+        <span class="material-symbols-outlined text-[32px] text-amber-500">wifi_off</span>
+        <h3 class="text-sm font-bold text-on-surface">Unable to load land holdings right now</h3>
+        <p class="text-xs text-on-surface-variant max-w-sm mx-auto">Please check your network connection or try again.</p>
+        <button id="retryCitizenLandsBtn" type="button" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-semibold hover:opacity-95 shadow-sm inline-flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Retry</span>
+        </button>
       </div>
     `;
+    const retryBtn = container.querySelector('#retryCitizenLandsBtn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        container.innerHTML = `
+          <div class="py-12 text-center text-on-surface-variant text-sm bg-surface-container-low border border-outline-variant/30 rounded-xl">
+            <span class="animate-spin inline-block mr-2 material-symbols-outlined text-[20px]">progress_activity</span>
+            ${t('common.loading', 'Loading land records...')}
+          </div>
+        `;
+        loadCitizenLands(userId, openEditModal);
+      });
+    }
   }
 }

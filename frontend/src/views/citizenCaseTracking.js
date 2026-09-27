@@ -10,6 +10,7 @@ import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
 import { realtimeService } from '../api/realtime.js';
+import { showToast } from '../utils/toast.js';
 
 export async function renderCitizenCaseTrackingView(container) {
   if (container._cleanupRealtime) {
@@ -181,8 +182,25 @@ async function loadCitizenCasesTracker(userId, activeCaseId) {
     renderCaseDetailView(targetCase, detailArea);
 
   } catch (err) {
+    console.warn('[CitizenCaseTracking] Failed to load tracker:', err);
     if (detailArea) {
-      detailArea.innerHTML = `<div class="p-6 bg-error/10 text-error text-xs rounded-xl">Failed to load tracker: ${err.message}</div>`;
+      detailArea.innerHTML = `
+        <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-8 text-center space-y-3">
+          <span class="material-symbols-outlined text-[32px] text-amber-500">wifi_off</span>
+          <h3 class="text-sm font-bold text-on-surface">Unable to load case tracker right now</h3>
+          <p class="text-xs text-on-surface-variant max-w-sm mx-auto">Please check your connection and try again.</p>
+          <button id="retryCitizenTrackerBtn" type="button" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-semibold hover:opacity-95 shadow-sm inline-flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Retry</span>
+          </button>
+        </div>
+      `;
+      const retryBtn = detailArea.querySelector('#retryCitizenTrackerBtn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          loadCitizenCasesTracker(userId, activeCaseId);
+        });
+      }
     }
   }
 }
@@ -334,44 +352,91 @@ async function loadCaseDocuments(caseId) {
       `;
     }).join('');
   } catch (err) {
-    listEl.innerHTML = `<div class="text-error text-xs">Failed to load documents: ${err.message}</div>`;
+    console.warn('[CitizenCaseTracking] Failed to load documents:', err);
+    listEl.innerHTML = `
+      <div class="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30 text-xs text-on-surface-variant flex items-center justify-between">
+        <span>Unable to load case documents right now.</span>
+        <button id="retryDocsBtn" type="button" class="text-primary font-semibold hover:underline">Retry</button>
+      </div>
+    `;
+    const retryBtn = listEl.querySelector('#retryDocsBtn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => loadCaseDocuments(caseId));
+    }
   }
 }
+
+const STATUS_DESCRIPTIONS = {
+  submitted: 'Grievance lodged and securely recorded in official intake queue.',
+  received: 'Acknowledged by Land Acquisition office; awaiting officer assignment.',
+  assigned: 'Assigned to designated Special Land Acquisition Officer for investigation.',
+  under_review: 'Officer is reviewing survey records, title documents, and compensation award status.',
+  documents_required: 'Additional certified documents requested from citizen to proceed.',
+  investigation: 'Field verification and joint measurement survey inquiry in progress.',
+  action_taken: 'Statutory action taken by revenue authorities.',
+  escalated: 'Escalated to higher appellate authority / Collectorate.',
+  resolved: 'Grievance resolved; award or measurement determination finalized.',
+  closed: 'Case officially closed.',
+  rejected: 'Grievance rejected with statutory reason recorded.',
+};
 
 async function loadCaseTimeline(caseId) {
   const timelineEl = document.getElementById('caseTimelineList');
   if (!timelineEl) return;
 
   try {
-    const events = await caseService.getCaseEvents(caseId);
+    const rawEvents = await caseService.getCaseEvents(caseId);
+    // Guarantee internal officer notes are never exposed to citizens
+    const events = (rawEvents || []).filter(e => !e.is_internal);
 
     if (events.length === 0) {
-      timelineEl.innerHTML = `<div class="text-xs text-on-surface-variant">No milestones recorded.</div>`;
+      timelineEl.innerHTML = `<div class="text-xs text-on-surface-variant py-3">No milestones recorded yet.</div>`;
       return;
     }
 
-    timelineEl.innerHTML = events.map(e => `
-      <div class="relative group">
-        <span class="absolute -left-[27px] top-1 w-3.5 h-3.5 rounded-full bg-primary ring-4 ring-surface-container-low"></span>
-        <div class="text-xs">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-bold text-on-surface capitalize">${e.action.replace(/_/g, ' ')}</span>
-            <span class="text-[11px] text-on-surface-variant font-tabular-data">${new Date(e.timestamp).toLocaleString()}</span>
-          </div>
-          ${e.old_status && e.new_status ? `
-            <div class="text-[11px] text-on-surface-variant mt-0.5">
-              Status changed: <span class="font-semibold uppercase">${e.old_status}</span> → <span class="font-semibold text-primary uppercase">${e.new_status}</span>
+    timelineEl.innerHTML = events.map(e => {
+      const stageExplanation = e.new_status && STATUS_DESCRIPTIONS[e.new_status]
+        ? STATUS_DESCRIPTIONS[e.new_status]
+        : '';
+
+      return `
+        <div class="relative group">
+          <span class="absolute -left-[27px] top-1 w-3.5 h-3.5 rounded-full bg-primary ring-4 ring-surface-container-low"></span>
+          <div class="text-xs space-y-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-bold text-on-surface capitalize">${e.action.replace(/_/g, ' ')}</span>
+              <span class="text-[11px] text-on-surface-variant font-tabular-data">${new Date(e.timestamp).toLocaleString()}</span>
             </div>
-          ` : ''}
-          ${e.comment ? `
-            <p class="text-xs text-on-surface mt-1 bg-surface-container-lowest p-2.5 rounded-lg border border-outline-variant/30 leading-relaxed">${e.comment}</p>
-          ` : ''}
+            ${e.old_status && e.new_status ? `
+              <div class="text-[11px] text-on-surface-variant">
+                Status: <span class="font-semibold uppercase">${e.old_status.replace(/_/g, ' ')}</span> → <span class="font-semibold text-primary uppercase">${e.new_status.replace(/_/g, ' ')}</span>
+              </div>
+            ` : ''}
+            ${stageExplanation ? `
+              <div class="text-[11px] text-primary/90 bg-primary/5 p-2 rounded border border-primary/10">
+                ${stageExplanation}
+              </div>
+            ` : ''}
+            ${e.comment ? `
+              <p class="text-xs text-on-surface mt-1 bg-surface-container-lowest p-2.5 rounded-lg border border-outline-variant/30 leading-relaxed">${e.comment}</p>
+            ` : ''}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
   } catch (err) {
-    timelineEl.innerHTML = `<div class="text-error text-xs">Failed to load timeline: ${err.message}</div>`;
+    console.warn('[CitizenCaseTracking] Failed to load timeline:', err);
+    timelineEl.innerHTML = `
+      <div class="p-3 rounded-lg bg-surface-container-low text-xs text-on-surface-variant flex items-center justify-between">
+        <span>Unable to refresh timeline milestones right now.</span>
+        <button id="retryTimelineBtn" type="button" class="text-primary font-semibold hover:underline">Retry</button>
+      </div>
+    `;
+    const retryBtn = timelineEl.querySelector('#retryTimelineBtn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => loadCaseTimeline(caseId));
+    }
   }
 }
 
@@ -380,7 +445,7 @@ function renderCitizenDocumentUploadCard(caseId) {
   if (!section) return;
 
   section.innerHTML = `
-    <div class="bg-amber-500/10 border border-amber-500/40 rounded-xl p-5 shadow-sm space-y-3 animate-pulse-subtle">
+    <div class="bg-amber-500/10 border border-amber-500/40 rounded-xl p-5 shadow-sm space-y-3 animate-fade-in">
       <div class="flex items-center gap-2.5 text-amber-900 dark:text-amber-200">
         <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[24px]">notification_important</span>
         <div>
@@ -392,7 +457,7 @@ function renderCitizenDocumentUploadCard(caseId) {
       <form id="respondDocUploadForm" class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
         <div>
           <label class="block font-semibold text-on-surface mb-1">Document Type *</label>
-          <select id="respDocType" class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface">
+          <select id="respDocType" class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
             <option value="7_12_extract">7/12 Extract</option>
             <option value="compensation_notice">Compensation Notice</option>
             <option value="sale_deed">Sale Deed / Title</option>
@@ -427,7 +492,7 @@ function renderCitizenDocumentUploadCard(caseId) {
 
     const activeUser = authService.getStoredUser();
     if (!activeUser) {
-      alert('Authentication required to upload documents.');
+      showToast('Authentication required to upload documents.', 'warning');
       btn.disabled = false;
       btn.textContent = 'Upload Document';
       return;
@@ -441,6 +506,12 @@ function renderCitizenDocumentUploadCard(caseId) {
       if (selectedFile) {
         if (selectedFile.size > 15 * 1024 * 1024) {
           throw new Error('File exceeds maximum allowed size of 15MB.');
+        }
+
+        const validExts = ['.pdf', '.jpg', '.jpeg', '.png', '.tiff'];
+        const ext = '.' + selectedFile.name.split('.').pop().toLowerCase();
+        if (!validExts.includes(ext)) {
+          throw new Error(`Unsupported file type (${ext}). Please upload PDF or image (.pdf, .jpg, .png, .tiff).`);
         }
 
         const formData = new FormData();
@@ -458,6 +529,8 @@ function renderCitizenDocumentUploadCard(caseId) {
         });
       }
 
+      showToast('Document successfully uploaded and attached to case dossier.', 'success');
+
       if (statusMsg) {
         statusMsg.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-semibold';
         statusMsg.textContent = 'Document successfully uploaded and attached to case dossier.';
@@ -468,14 +541,14 @@ function renderCitizenDocumentUploadCard(caseId) {
       loadCaseTimeline(caseId);
       setTimeout(() => {
         section.innerHTML = '';
-      }, 1200);
+      }, 1500);
     } catch (err) {
+      console.warn('[CitizenCaseTracking] Upload failed:', err);
+      showToast(err.message || 'Document upload failed. Please try again.', 'error');
       if (statusMsg) {
         statusMsg.className = 'text-xs text-error font-semibold';
         statusMsg.textContent = `Upload failed: ${err.message}`;
         statusMsg.classList.remove('hidden');
-      } else {
-        alert(`Upload failed: ${err.message}`);
       }
     } finally {
       btn.disabled = false;

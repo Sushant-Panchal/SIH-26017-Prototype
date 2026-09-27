@@ -4,6 +4,8 @@
  * Supports explicit activation, pulsing listening indicator, field insertion, and language selection.
  */
 
+import { showToast } from './toast.js';
+
 export class SpeechRecognizer {
   constructor() {
     const SpeechRecognition = typeof window !== 'undefined'
@@ -113,7 +115,7 @@ export function attachMicToInput(inputEl, getLangFn) {
     e.stopPropagation();
 
     if (!stt.supported) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or a Web Speech-enabled browser.');
+      showToast('Speech recognition is not supported in this browser. Please use Chrome, Edge, or a Web Speech-enabled browser.', 'warning');
       return;
     }
 

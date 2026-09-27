@@ -9,6 +9,7 @@ import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
+import { showToast } from '../utils/toast.js';
 
 export async function renderCitizenComplaintView(container) {
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
@@ -253,7 +254,12 @@ export async function renderCitizenComplaintView(container) {
     try {
       const landId = document.getElementById('caseLandId').value;
       if (!landId) {
-        alert('Please select a registered land parcel. If you have not registered your land yet, please visit "My Land" to register your survey number first.');
+        showToast('Please select a registered land parcel first. If not yet added, click "Register Land".', 'warning');
+        const landSelect = document.getElementById('caseLandId');
+        if (landSelect) {
+          landSelect.focus();
+          landSelect.classList.add('ring-2', 'ring-amber-500');
+        }
         submitBtn.disabled = false;
         submitBtn.innerHTML = `
           <span class="material-symbols-outlined text-[18px]">send</span>
@@ -264,6 +270,16 @@ export async function renderCitizenComplaintView(container) {
       const category = document.getElementById('caseCategory').value;
       const priority = document.getElementById('casePriority').value;
       const description = document.getElementById('caseDescription').value.trim();
+
+      if (description.length < 5) {
+        showToast('Please provide a detailed description of your grievance (at least 5 characters).', 'warning');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[18px]">send</span>
+          <span>${t('citizen.submitGrievanceBtn', 'Submit Formal Grievance to SLAO')}</span>
+        `;
+        return;
+      }
 
       const payload = {
         citizen_id: user.user_id,
@@ -281,21 +297,28 @@ export async function renderCitizenComplaintView(container) {
       // Optional document metadata
       const fileName = document.getElementById('docFileName').value.trim();
       if (fileName && createdCaseId) {
-        await caseService.createCaseDocument(createdCaseId, {
-          uploaded_by: user.user_id,
-          land_id: landId,
-          document_type: document.getElementById('docType').value,
-          file_name: fileName,
-          storage_reference: `storage/cases/${createdCaseId}/${fileName}`,
-        });
+        try {
+          await caseService.createCaseDocument(createdCaseId, {
+            uploaded_by: user.user_id,
+            land_id: landId,
+            document_type: document.getElementById('docType').value,
+            file_name: fileName,
+            storage_reference: `storage/cases/${createdCaseId}/${fileName}`,
+          });
+        } catch (_) {
+          // Document metadata failure is non-fatal for case creation
+        }
       }
+
+      showToast(`Grievance ${createdCaseId} created and assigned to SLAO intake.`, 'success');
 
       // Show success modal
       document.getElementById('createdCaseIdDisplay').textContent = createdCaseId;
       document.getElementById('caseSuccessModal').classList.remove('hidden');
 
     } catch (err) {
-      alert(`Submission failed: ${err.message}`);
+      console.warn('[CitizenComplaint] Submission failed:', err);
+      showToast(err.message || 'Unable to submit grievance. Please verify all fields.', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = `

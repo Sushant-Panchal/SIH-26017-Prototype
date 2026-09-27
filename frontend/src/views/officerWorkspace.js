@@ -11,11 +11,12 @@ import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
 import { renderAuthGateway } from '../components/authModal.js';
 import { realtimeService } from '../api/realtime.js';
+import { showToast } from '../utils/toast.js';
 
 const VALID_STATUS_TRANSITIONS = {
   submitted: ['received', 'assigned', 'under_review', 'rejected'],
   received: ['assigned', 'under_review', 'rejected'],
-  assigned: ['under_review', 'documents_required', 'investigation'],
+  assigned: ['under_review', 'investigation', 'documents_required', 'rejected'],
   under_review: ['documents_required', 'investigation', 'action_taken', 'escalated', 'resolved', 'rejected'],
   documents_required: ['under_review', 'investigation'],
   investigation: ['action_taken', 'escalated', 'under_review', 'resolved'],
@@ -506,9 +507,11 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             actor_user_id: officer.user_id,
             verification_status: 'verified',
           });
+          showToast('Document verified and validated in official dossier.', 'success');
           await loadAndRenderWorkspace(caseId, officer, container);
         } catch (err) {
-          alert('Verification failed: ' + err.message);
+          console.warn('[OfficerWorkspace] Verification failed:', err);
+          showToast(err.message || 'Document verification failed. Please try again.', 'error');
           btn.disabled = false;
           btn.innerHTML = '<span class="material-symbols-outlined text-[13px]">check</span> Verify Document';
         }
@@ -573,9 +576,11 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
             comment: text,
             is_internal: true,
           });
+          showToast('Confidential internal note recorded in audit log.', 'success');
           await loadAndRenderWorkspace(caseId, officer, container);
         } catch (err) {
-          alert('Failed to save internal note: ' + err.message);
+          console.warn('[OfficerWorkspace] Note save failed:', err);
+          showToast(err.message || 'Failed to save confidential internal note.', 'error');
           submitBtn.disabled = false;
         }
       });
@@ -606,15 +611,42 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
 // ============================================================
 
 function openStatusModal(caseData, officer, allowedStatuses, container, onComplete) {
+  const getImpactNotice = (status) => {
+    if (status === 'resolved') {
+      return `
+        <div id="statusImpactNotice" class="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[11px] leading-relaxed">
+          <strong>⚠️ Resolution Confirmation:</strong> Transitioning to <strong>RESOLVED</strong> concludes active grievance investigation and transmits formal resolution notice to citizen.
+        </div>
+      `;
+    }
+    if (status === 'escalated') {
+      return `
+        <div id="statusImpactNotice" class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-800 dark:text-red-300 text-[11px] leading-relaxed">
+          <strong>⚠️ Escalation Warning:</strong> Transitioning to <strong>ESCALATED</strong> raises dossier priority to district revenue oversight and flags inter-agency delay risks.
+        </div>
+      `;
+    }
+    if (status === 'rejected') {
+      return `
+        <div id="statusImpactNotice" class="p-2.5 rounded-lg bg-error/10 border border-error/30 text-error text-[11px] leading-relaxed">
+          <strong>⚠️ Rejection Warning:</strong> Transitioning to <strong>REJECTED</strong> dismisses the grievance. A detailed statutory justification is required below.
+        </div>
+      `;
+    }
+    return `<div id="statusImpactNotice" class="hidden"></div>`;
+  };
+
+  const initialStatus = allowedStatuses[0] || '';
+
   container.innerHTML = `
-    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
       <div class="bg-surface border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-lg space-y-4">
         <div class="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-1.5">
+          <h3 id="statusModalTitle" class="text-sm font-bold text-on-surface flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px] text-primary">sync_alt</span>
             <span>Update Case Lifecycle Status</span>
           </h3>
-          <button id="closeModalBtn" class="text-on-surface-variant hover:text-on-surface">
+          <button id="closeModalBtn" aria-label="Close modal" class="text-on-surface-variant hover:text-on-surface">
             <span class="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
@@ -626,7 +658,7 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
           </div>
 
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Target Next Status *</label>
+            <label for="targetStatusSelect" class="block font-semibold text-on-surface mb-1">Target Next Status *</label>
             ${allowedStatuses.length === 0 ? `
               <p class="text-xs text-on-surface-variant italic">This case is in a terminal status (${caseData.status}). No transitions available.</p>
             ` : `
@@ -638,8 +670,12 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
             `}
           </div>
 
+          <div id="impactNoticeSlot">
+            ${getImpactNotice(initialStatus)}
+          </div>
+
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Status Change Comment / Official Note *</label>
+            <label for="statusCommentText" class="block font-semibold text-on-surface mb-1">Status Change Comment / Official Note *</label>
             <textarea id="statusCommentText" rows="3" required placeholder="Explain reason for transition, statutory findings, or field decisions..." class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
           </div>
 
@@ -648,8 +684,8 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
               Cancel
             </button>
             ${allowedStatuses.length > 0 ? `
-              <button type="submit" id="submitStatusBtn" class="px-4 py-1.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-95">
-                Apply Transition
+              <button type="submit" id="submitStatusBtn" class="px-4 py-1.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-95 flex items-center gap-1.5">
+                <span>Apply Transition</span>
               </button>
             ` : ''}
           </div>
@@ -662,6 +698,14 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
   container.querySelector('#closeModalBtn').addEventListener('click', close);
   container.querySelector('#cancelModalBtn').addEventListener('click', close);
 
+  const statusSelect = container.querySelector('#targetStatusSelect');
+  const impactSlot = container.querySelector('#impactNoticeSlot');
+  if (statusSelect && impactSlot) {
+    statusSelect.addEventListener('change', () => {
+      impactSlot.innerHTML = getImpactNotice(statusSelect.value);
+    });
+  }
+
   const form = container.querySelector('#statusUpdateForm');
   if (form) {
     form.addEventListener('submit', async (e) => {
@@ -671,7 +715,7 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
 
       const btn = container.querySelector('#submitStatusBtn');
       btn.disabled = true;
-      btn.textContent = 'Applying...';
+      btn.innerHTML = '<span class="material-symbols-outlined text-[13px] animate-spin">progress_activity</span> Applying...';
 
       try {
         await caseService.updateCaseStatus(caseData.case_id, {
@@ -679,12 +723,13 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
           status: newStatus,
           comment: comment,
         });
+        showToast(`Case status transitioned to ${newStatus.replace(/_/g, ' ').toUpperCase()}.`, 'success');
         close();
         onComplete();
       } catch (err) {
-        alert('Status update failed: ' + err.message);
+        showToast(err.message || 'Status update failed. Please verify transition rules.', 'error');
         btn.disabled = false;
-        btn.textContent = 'Apply Transition';
+        btn.innerHTML = '<span>Apply Transition</span>';
       }
     });
   }
@@ -692,26 +737,26 @@ function openStatusModal(caseData, officer, allowedStatuses, container, onComple
 
 function openAssignModal(caseData, officer, container, onComplete) {
   container.innerHTML = `
-    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
       <div class="bg-surface border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-lg space-y-4">
         <div class="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-1.5">
+          <h3 id="assignModalTitle" class="text-sm font-bold text-on-surface flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px] text-primary">person_add</span>
             <span>Assign Officer to Dossier</span>
           </h3>
-          <button id="closeModalBtn" class="text-on-surface-variant hover:text-on-surface">
+          <button id="closeModalBtn" aria-label="Close modal" class="text-on-surface-variant hover:text-on-surface">
             <span class="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         <form id="assignForm" class="space-y-3.5 text-xs">
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Target Officer ID *</label>
+            <label for="targetOfficerId" class="block font-semibold text-on-surface mb-1">Target Officer ID *</label>
             <input type="text" id="targetOfficerId" required value="${caseData.assigned_officer_id || officer.user_id}" placeholder="e.g. USR-..." class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-tabular-data" />
           </div>
 
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Assignment Directive / Note</label>
+            <label for="assignComment" class="block font-semibold text-on-surface mb-1">Assignment Directive / Note</label>
             <textarea id="assignComment" rows="3" placeholder="Specify investigation priority, relevant acquisition survey, or deadline..." class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
           </div>
 
@@ -719,8 +764,8 @@ function openAssignModal(caseData, officer, container, onComplete) {
             <button type="button" id="cancelModalBtn" class="px-3 py-1.5 border border-outline-variant/60 rounded-lg text-on-surface hover:bg-surface-container">
               Cancel
             </button>
-            <button type="submit" id="submitAssignBtn" class="px-4 py-1.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-95">
-              Confirm Assignment
+            <button type="submit" id="submitAssignBtn" class="px-4 py-1.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-95 flex items-center gap-1.5">
+              <span>Confirm Assignment</span>
             </button>
           </div>
         </form>
@@ -740,7 +785,7 @@ function openAssignModal(caseData, officer, container, onComplete) {
 
     const btn = container.querySelector('#submitAssignBtn');
     btn.disabled = true;
-    btn.textContent = 'Assigning...';
+    btn.innerHTML = '<span class="material-symbols-outlined text-[13px] animate-spin">progress_activity</span> Assigning...';
 
     try {
       await caseService.assignCase(caseData.case_id, {
@@ -748,33 +793,34 @@ function openAssignModal(caseData, officer, container, onComplete) {
         assigned_officer_id: assignedId,
         comment: comment || `Assigned to ${assignedId}`,
       });
+      showToast(`Case assigned to officer ${assignedId}.`, 'success');
       close();
       onComplete();
     } catch (err) {
-      alert('Assignment failed: ' + err.message);
+      showToast(err.message || 'Officer assignment failed. Please check user ID.', 'error');
       btn.disabled = false;
-      btn.textContent = 'Confirm Assignment';
+      btn.innerHTML = '<span>Confirm Assignment</span>';
     }
   });
 }
 
 function openDocRequestModal(caseData, officer, container, onComplete) {
   container.innerHTML = `
-    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="docReqModalTitle">
       <div class="bg-surface border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-lg space-y-4">
         <div class="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-1.5">
+          <h3 id="docReqModalTitle" class="text-sm font-bold text-on-surface flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px] text-primary">post_add</span>
             <span>Request Supporting Document</span>
           </h3>
-          <button id="closeModalBtn" class="text-on-surface-variant hover:text-on-surface">
+          <button id="closeModalBtn" aria-label="Close modal" class="text-on-surface-variant hover:text-on-surface">
             <span class="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         <form id="docRequestForm" class="space-y-3.5 text-xs">
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Document Type *</label>
+            <label for="reqDocType" class="block font-semibold text-on-surface mb-1">Document Type *</label>
             <select id="reqDocType" required class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
               <option value="7_12_extract">7/12 RoR Extract</option>
               <option value="mutation_entry">Mutation Entry (Ferfar / 6D)</option>
@@ -788,12 +834,12 @@ function openDocRequestModal(caseData, officer, container, onComplete) {
           </div>
 
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Official Reason for Request *</label>
+            <label for="reqReason" class="block font-semibold text-on-surface mb-1">Official Reason for Request *</label>
             <input type="text" id="reqReason" required placeholder="e.g. Discrepancy in parcel boundary vs Section 19 notification" class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
 
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Message to Citizen (Optional)</label>
+            <label for="reqMessage" class="block font-semibold text-on-surface mb-1">Message to Citizen (Optional)</label>
             <textarea id="reqMessage" rows="2" placeholder="Please upload clear scanned PDF showing official revenue stamp..." class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
           </div>
 
@@ -801,8 +847,8 @@ function openDocRequestModal(caseData, officer, container, onComplete) {
             <button type="button" id="cancelModalBtn" class="px-3 py-1.5 border border-outline-variant/60 rounded-lg text-on-surface hover:bg-surface-container">
               Cancel
             </button>
-            <button type="submit" id="submitDocReqBtn" class="px-4 py-1.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-95">
-              Send Request to Citizen
+            <button type="submit" id="submitDocReqBtn" class="px-4 py-1.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-95 flex items-center gap-1.5">
+              <span>Send Request to Citizen</span>
             </button>
           </div>
         </form>
@@ -823,7 +869,7 @@ function openDocRequestModal(caseData, officer, container, onComplete) {
 
     const btn = container.querySelector('#submitDocReqBtn');
     btn.disabled = true;
-    btn.textContent = 'Sending...';
+    btn.innerHTML = '<span class="material-symbols-outlined text-[13px] animate-spin">progress_activity</span> Sending...';
 
     try {
       await caseService.requestDocument(caseData.case_id, {
@@ -832,33 +878,38 @@ function openDocRequestModal(caseData, officer, container, onComplete) {
         reason: reason,
         message: message,
       });
+      showToast('Document request transmitted to citizen.', 'success');
       close();
       onComplete();
     } catch (err) {
-      alert('Failed to request document: ' + err.message);
+      showToast(err.message || 'Failed to transmit document request.', 'error');
       btn.disabled = false;
-      btn.textContent = 'Send Request to Citizen';
+      btn.innerHTML = '<span>Send Request to Citizen</span>';
     }
   });
 }
 
 function openRejectModal(caseId, docId, officer, container, onComplete) {
   container.innerHTML = `
-    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="rejectDocModalTitle">
       <div class="bg-surface border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-lg space-y-4">
         <div class="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-          <h3 class="text-sm font-bold text-error flex items-center gap-1.5">
+          <h3 id="rejectDocModalTitle" class="text-sm font-bold text-error flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px]">close</span>
             <span>Reject Submitted Document</span>
           </h3>
-          <button id="closeModalBtn" class="text-on-surface-variant hover:text-on-surface">
+          <button id="closeModalBtn" aria-label="Close modal" class="text-on-surface-variant hover:text-on-surface">
             <span class="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
+        <div class="p-2.5 rounded-lg bg-error/10 border border-error/30 text-error text-[11px] leading-relaxed">
+          <strong>⚠️ Document Rejection Impact:</strong> Rejecting this document alerts the citizen that the submission is invalid or unreadable. Specify precise remediation instructions below.
+        </div>
+
         <form id="rejectDocForm" class="space-y-3.5 text-xs">
           <div>
-            <label class="block font-semibold text-on-surface mb-1">Rejection Reason *</label>
+            <label for="rejectionReasonText" class="block font-semibold text-on-surface mb-1">Rejection Reason *</label>
             <textarea id="rejectionReasonText" rows="3" required placeholder="Specify why the document cannot be verified (e.g. illegible scan, outdated revenue extract, seal missing)..." class="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-error"></textarea>
           </div>
 
@@ -866,8 +917,8 @@ function openRejectModal(caseId, docId, officer, container, onComplete) {
             <button type="button" id="cancelModalBtn" class="px-3 py-1.5 border border-outline-variant/60 rounded-lg text-on-surface hover:bg-surface-container">
               Cancel
             </button>
-            <button type="submit" id="submitRejectBtn" class="px-4 py-1.5 bg-error text-white font-semibold rounded-lg hover:opacity-95">
-              Confirm Rejection
+            <button type="submit" id="submitRejectBtn" class="px-4 py-1.5 bg-error text-white font-semibold rounded-lg hover:opacity-95 flex items-center gap-1.5">
+              <span>Confirm Rejection</span>
             </button>
           </div>
         </form>
@@ -886,7 +937,7 @@ function openRejectModal(caseId, docId, officer, container, onComplete) {
 
     const btn = container.querySelector('#submitRejectBtn');
     btn.disabled = true;
-    btn.textContent = 'Rejecting...';
+    btn.innerHTML = '<span class="material-symbols-outlined text-[13px] animate-spin">progress_activity</span> Rejecting...';
 
     try {
       await caseService.verifyDocument(caseId, docId, {
@@ -894,12 +945,14 @@ function openRejectModal(caseId, docId, officer, container, onComplete) {
         verification_status: 'rejected',
         rejection_reason: reason,
       });
+      showToast('Document marked as rejected with official feedback.', 'info');
       close();
       onComplete();
     } catch (err) {
-      alert('Failed to reject document: ' + err.message);
+      showToast(err.message || 'Failed to reject document.', 'error');
       btn.disabled = false;
-      btn.textContent = 'Confirm Rejection';
+      btn.innerHTML = '<span>Confirm Rejection</span>';
     }
   });
 }
+

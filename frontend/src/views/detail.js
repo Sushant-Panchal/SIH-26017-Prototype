@@ -16,6 +16,7 @@ import { createReadAloudButton } from '../utils/tts.js';
 import { renderInfoButton } from '../utils/infoModal.js';
 import { getLocalizedStage } from '../utils/localization.js';
 import { i18n, t } from '../i18n/index.js';
+import { showToast } from '../utils/toast.js';
 
 export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavigateToAssessment) {
   const project = SAMPLE_PROJECTS.find(p => p.id === projectId) || SAMPLE_PROJECTS[0];
@@ -487,8 +488,9 @@ ${t('detail.modalDisclaimer', 'This document is a prototype draft generated auto
           label.textContent = t('detail.modalCopied', 'Copied to Clipboard!');
           setTimeout(() => { label.textContent = t('detail.modalCopyDraft', 'Copy Draft Text'); }, 2000);
         }
+        showToast(t('detail.modalCopied', 'Copied to Clipboard!'), 'success');
       }).catch(() => {
-        alert(t('detail.modalCopied', 'Copied to Clipboard!'));
+        showToast('Unable to copy automatically. Please select text and copy manually.', 'warning');
       });
     }
   });

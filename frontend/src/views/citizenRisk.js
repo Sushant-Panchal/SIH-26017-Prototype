@@ -9,6 +9,7 @@ import { predictionService } from '../api/prediction.js';
 import { authService } from '../api/auth.js';
 import { t } from '../i18n/index.js';
 import { attachInfoTooltips } from '../utils/infoModal.js';
+import { showToast } from '../utils/toast.js';
 
 export async function renderCitizenRiskView(container) {
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
@@ -273,8 +274,33 @@ export async function renderCitizenRiskView(container) {
       };
 
       renderRiskResult(latestAssessment);
+      showToast('AI delay risk estimation calculated successfully.', 'success');
     } catch (err) {
-      alert(`Prediction failed: ${err.message}`);
+      console.warn('[CitizenRisk] Prediction failed:', err);
+      showToast('Unable to calculate delay risk right now. Please verify fields and try again.', 'error');
+      const placeholder = document.getElementById('riskResultPlaceholder');
+      const content = document.getElementById('riskResultContent');
+      if (placeholder) {
+        placeholder.classList.remove('hidden');
+        placeholder.innerHTML = `
+          <div class="py-8 text-center text-on-surface-variant space-y-3">
+            <span class="material-symbols-outlined text-[36px] text-amber-500">warning</span>
+            <div class="font-medium text-sm text-on-surface">Unable to complete delay assessment</div>
+            <p class="text-xs max-w-sm mx-auto opacity-80">The prediction engine is temporarily unavailable or timed out. Please try again.</p>
+            <button id="retryPredictionBtn" type="button" class="px-4 py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 shadow-sm inline-flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              <span>Retry Assessment</span>
+            </button>
+          </div>
+        `;
+        const retryBtn = placeholder.querySelector('#retryPredictionBtn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', () => {
+            form.requestSubmit();
+          });
+        }
+      }
+      if (content) content.classList.add('hidden');
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = `
