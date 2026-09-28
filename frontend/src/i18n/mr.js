@@ -1680,11 +1680,22 @@ export default {
     "rejected": "नाकारले"
   },
   "categories": {
+    "compensation_not_received": "भरपाई मिळालेली नाही",
     "compensation_dispute": "भरपाई वाद",
+    "land_measurement": "जमीन सीमांकन व मोजणी",
+    "measurement_dispute": "संयुक्त मोजणी वाद",
     "measurement_error": "मोजणी त्रुटी",
+    "notice_issue": "वैधानिक नोटीस समस्या",
+    "statutory_notice": "वैधानिक नोटीस समस्या",
     "notice_discrepancy": "अधिसूचना विसंगती",
-    "delayed_award": "विलंबित निवाडा",
+    "documentation": "दस्तऐवज / अभिलेख त्रुटी",
     "title_record_defect": "मालकी हक्क / नोंद त्रुटी",
+    "ownership_mutation": "मालकी हक्क व फेरफार",
+    "possession": "ताबा वाद",
+    "rehabilitation_resettlement": "पुनर्वसन व पुनर्वसाहत (आर अँड आर)",
+    "valuation_objection": "मूल्यांकन आक्षेप",
+    "compensation_delay": "भरपाई विलंब",
+    "delayed_award": "विलंबित निवाडा",
     "other": "इतर तक्रार"
   }
 };

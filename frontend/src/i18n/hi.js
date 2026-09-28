@@ -1680,11 +1680,22 @@ export default {
     "rejected": "अस्वीकृत"
   },
   "categories": {
+    "compensation_not_received": "मुआवजा अप्राप्त",
     "compensation_dispute": "मुआवजा विवाद",
+    "land_measurement": "भूमि सीमांकन व माप",
+    "measurement_dispute": "संयुक्त माप विवाद",
     "measurement_error": "माप त्रुटि",
+    "notice_issue": "सांविधिक नोटिस समस्या",
+    "statutory_notice": "सांविधिक नोटिस समस्या",
     "notice_discrepancy": "अधिसूचना विसंगति",
-    "delayed_award": "विलंबित पंचाट",
+    "documentation": "दस्तावेजीकरण / अभिलेख त्रुटि",
     "title_record_defect": "स्वामित्व / रिकॉर्ड त्रुटि",
+    "ownership_mutation": "स्वामित्व व नामांतरण",
+    "possession": "कब्जा विवाद",
+    "rehabilitation_resettlement": "पुनर्वास व पुनर्स्थापन (आर एंड आर)",
+    "valuation_objection": "मूल्यांकन आपत्ति",
+    "compensation_delay": "मुआवजा विलंब",
+    "delayed_award": "विलंबित पंचाट",
     "other": "अन्य शिकायत"
   }
 };

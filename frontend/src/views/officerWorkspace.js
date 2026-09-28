@@ -605,7 +605,15 @@ async function loadAndRenderWorkspace(caseId, officer, container) {
     `;
     const retryBtn = contentEl.querySelector('#btnRetryWorkspace');
     if (retryBtn) {
-      retryBtn.addEventListener('click', () => loadAndRenderWorkspace(caseId, officer, container));
+      retryBtn.addEventListener('click', () => {
+        contentEl.innerHTML = `
+          <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-8 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined animate-spin text-[32px] text-primary mb-2">progress_activity</span>
+            <p class="text-sm font-medium">${t('officer.loadingDossier', 'Loading case dossier and audit history')} for ${caseId}...</p>
+          </div>
+        `;
+        loadAndRenderWorkspace(caseId, officer, container);
+      });
     }
   }
 }

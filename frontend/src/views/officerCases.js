@@ -380,7 +380,17 @@ async function loadOfficerCasesData(page = 1) {
     `;
     const retryBtn = tableBody.querySelector('#retryOfficerCasesBtn');
     if (retryBtn) {
-      retryBtn.addEventListener('click', () => loadOfficerCasesData(page));
+      retryBtn.addEventListener('click', () => {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-12 text-on-surface-variant">
+              <span class="animate-spin inline-block mr-1 material-symbols-outlined text-[18px]">progress_activity</span>
+              ${t('officer.loadingQueue', 'Loading officer queue...')}
+            </td>
+          </tr>
+        `;
+        loadOfficerCasesData(page);
+      });
     }
   }
 }

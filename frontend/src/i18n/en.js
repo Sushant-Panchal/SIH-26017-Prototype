@@ -1680,11 +1680,22 @@ export default {
     "rejected": "Rejected"
   },
   "categories": {
+    "compensation_not_received": "Compensation Not Received",
     "compensation_dispute": "Compensation Dispute",
+    "land_measurement": "Land Boundary & Measurement",
+    "measurement_dispute": "Joint Measurement Dispute",
     "measurement_error": "Measurement Error",
+    "notice_issue": "Statutory Notice Issue",
+    "statutory_notice": "Statutory Notice Issue",
     "notice_discrepancy": "Notice Discrepancy",
-    "delayed_award": "Delayed Award",
+    "documentation": "Documentation / Record Defect",
     "title_record_defect": "Title / Record Defect",
+    "ownership_mutation": "Ownership Title & Mutation",
+    "possession": "Disputed Possession",
+    "rehabilitation_resettlement": "Rehabilitation & Resettlement (R&R)",
+    "valuation_objection": "Valuation Objection",
+    "compensation_delay": "Compensation Delay",
+    "delayed_award": "Delayed Award",
     "other": "Other Grievance"
   }
 };

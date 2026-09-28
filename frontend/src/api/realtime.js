@@ -31,7 +31,9 @@ class RealtimeService {
       return;
     }
 
-    const token = authService.getAccessToken();
+    const token = typeof authService.getAccessToken === 'function'
+      ? authService.getAccessToken()
+      : (typeof authService.getStoredToken === 'function' ? authService.getStoredToken() : null);
     if (!token) {
       this.status = 'disconnected';
       this._notifyStatus();

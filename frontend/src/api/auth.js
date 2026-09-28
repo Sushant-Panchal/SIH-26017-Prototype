@@ -64,7 +64,7 @@ export const authService = {
       return null;
     }
     try {
-      const user = await apiClient.get('/api/auth/me');
+      const user = await apiClient.get('/api/auth/me', { timeout: 8000 });
       if (user && user.user_id) {
         localStorage.setItem(USER_KEY, JSON.stringify(user));
         return user;
@@ -72,8 +72,14 @@ export const authService = {
       this.clearSession();
       return null;
     } catch (err) {
-      this.clearSession();
-      return null;
+      // Only clear session on definitive authorization failure (401 Unauthorized / 403 Forbidden)
+      if (err?.status === 401 || err?.status === 403) {
+        this.clearSession();
+        return null;
+      }
+      // On network timeout or transient backend unreachable, retain cached session
+      console.warn('[AuthService] Backend verification unavailable, using cached session:', err?.message || err);
+      return this.getStoredUser();
     }
   },
 
@@ -103,6 +109,13 @@ export const authService = {
    */
   getStoredToken() {
     return typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+  },
+
+  /**
+   * Get cached access token (alias used by SSE / real-time service)
+   */
+  getAccessToken() {
+    return this.getStoredToken();
   },
 
   /**

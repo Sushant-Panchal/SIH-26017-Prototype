@@ -184,6 +184,14 @@ async function loadCitizenCasesTracker(userId, activeCaseId) {
 
   } catch (err) {
     console.warn('[CitizenCaseTracking] Failed to load tracker:', err);
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div class="py-6 text-center text-on-surface-variant text-xs space-y-1">
+          <span class="material-symbols-outlined text-[24px] text-amber-500">error</span>
+          <div class="font-semibold text-on-surface">${t('common.errorLoading', 'Failed to load cases')}</div>
+        </div>
+      `;
+    }
     if (detailArea) {
       detailArea.innerHTML = `
         <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-8 text-center space-y-3">
@@ -199,6 +207,22 @@ async function loadCitizenCasesTracker(userId, activeCaseId) {
       const retryBtn = detailArea.querySelector('#retryCitizenTrackerBtn');
       if (retryBtn) {
         retryBtn.addEventListener('click', () => {
+          if (listContainer) {
+            listContainer.innerHTML = `
+              <div class="py-8 text-center text-on-surface-variant text-xs">
+                <span class="animate-spin inline-block mr-1 material-symbols-outlined text-[16px]">progress_activity</span>
+                ${t('common.loadingCases', 'Loading cases...')}
+              </div>
+            `;
+          }
+          if (detailArea) {
+            detailArea.innerHTML = `
+              <div class="bg-surface-container-low border border-outline-variant/40 rounded-xl p-12 text-center text-on-surface-variant">
+                <span class="animate-spin inline-block text-[32px] text-primary mb-2 material-symbols-outlined">progress_activity</span>
+                <div class="font-medium text-sm">${t('common.loading', 'Loading case details...')}</div>
+              </div>
+            `;
+          }
           loadCitizenCasesTracker(userId, activeCaseId);
         });
       }

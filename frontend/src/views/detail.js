@@ -4,6 +4,7 @@
  */
 
 import { SAMPLE_PROJECTS, SCENARIO_PRESETS } from '../data/presets.js';
+import { openProjectPickerModal } from '../components/projectPickerModal.js';
 import {
   getRiskLevel,
   getRiskWording,
@@ -35,6 +36,10 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
           <span class="text-on-surface font-semibold font-tabular-data">${project.id}</span>
           <span>/</span>
           <span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-semibold">${t('detail.detailedAnalysis', 'Detailed Risk Analysis')}</span>
+          <button id="breadcrumbSwitchProjectBtn" type="button" class="ml-2 px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-primary hover:underline font-semibold flex items-center gap-1 text-[11px] transition-colors">
+            <span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+            <span>${t('assessment.selectProject', 'Select Existing Project')}</span>
+          </button>
         </div>
         <div class="flex items-center gap-space-md font-label-sm text-label-sm">
           <span class="inline-flex items-center gap-1.5 text-on-surface-variant">
@@ -94,6 +99,10 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
 
           <!-- Action Panel Buttons -->
           <div class="flex flex-wrap items-center gap-space-sm w-full xl:w-auto shrink-0">
+            <button class="px-space-md py-2 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm font-semibold border border-outline-variant/40" id="detailSelectProjectBtn" type="button">
+              <span class="material-symbols-outlined text-[18px]">folder_open</span>
+              <span>${t('assessment.selectProject', 'Select Existing Project')}</span>
+            </button>
             <div id="detailReadAloudSlot"></div>
             <button class="px-space-md py-2 bg-secondary-container hover:bg-secondary text-on-surface hover:text-on-secondary font-label-md text-label-md rounded transition-colors flex items-center gap-1.5 shadow-sm font-bold" id="detailRerunBtn" type="button">
               <span class="material-symbols-outlined text-[18px]">bolt</span>
@@ -310,6 +319,26 @@ export function renderDetailView(container, projectId = 'BF-NH-2024-09', onNavig
     draftDcBtn.addEventListener('click', () => {
       openDraftDcOrderModal(project, riskLevel);
     });
+  }
+
+  const handleSwitchProject = () => {
+    openProjectPickerModal({
+      activeProjectId: project.id,
+      onSelect: (selectedProject) => {
+        window.location.hash = `#/audit?id=${encodeURIComponent(selectedProject.id)}`;
+        renderDetailView(container, selectedProject.id, onNavigateToAssessment);
+      },
+    });
+  };
+
+  const selectProjectBtn = container.querySelector('#detailSelectProjectBtn');
+  if (selectProjectBtn) {
+    selectProjectBtn.addEventListener('click', handleSwitchProject);
+  }
+
+  const breadcrumbSwitchBtn = container.querySelector('#breadcrumbSwitchProjectBtn');
+  if (breadcrumbSwitchBtn) {
+    breadcrumbSwitchBtn.addEventListener('click', handleSwitchProject);
   }
 
   const breadcrumb = container.querySelector('#backToProjectsBreadcrumb');

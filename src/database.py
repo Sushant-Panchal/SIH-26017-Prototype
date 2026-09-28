@@ -137,6 +137,13 @@ class AsyncMemoryCollection:
                             return False
                         elif op == "$lte" and not (doc_val is not None and doc_val <= op_val):
                             return False
+                        elif op == "$regex":
+                            flags = 0
+                            if val.get("$options") == "i":
+                                flags = re.IGNORECASE
+                            pattern = op_val
+                            if not (isinstance(doc_val, str) and re.search(pattern, doc_val, flags)):
+                                return False
                 elif doc_val != val:
                     return False
         return True
@@ -144,6 +151,16 @@ class AsyncMemoryCollection:
     async def create_index(self, keys: Any, **kwargs) -> str:
         self._indexes.append({"keys": keys, "kwargs": kwargs})
         return str(keys)
+
+    async def insert_many(self, docs: List[Dict[str, Any]]):
+        ids = []
+        for d in docs:
+            res = await self.insert_one(d)
+            ids.append(res.inserted_id)
+        class InsertManyResult:
+            def __init__(self, inserted_ids):
+                self.inserted_ids = inserted_ids
+        return InsertManyResult(ids)
 
     async def insert_one(self, doc: Dict[str, Any]) -> InsertOneResult:
         # Check uniqueness constraints

@@ -6,7 +6,8 @@
  * dynamic SHAP risk-increasing factor breakdowns, and risk-mitigation vectors.
  */
 
-import { SCENARIO_PRESETS } from '../data/presets.js';
+import { SCENARIO_PRESETS, SAMPLE_PROJECTS } from '../data/presets.js';
+import { openProjectPickerModal } from '../components/projectPickerModal.js';
 import { predictionService } from '../api/prediction.js';
 import {
   getRiskLevel,
@@ -31,11 +32,13 @@ import { i18n, t } from '../i18n/index.js';
 
 let currentAssessmentState = {
   activePreset: 'medium',
+  activeProjectId: null,
+  selectedProject: null,
   lastPrediction: null,
   isLoading: false,
 };
 
-export function renderAssessmentView(container, initialPresetKey = 'medium') {
+export function renderAssessmentView(container, initialPresetKey = 'medium', initialProjectId = null) {
   currentAssessmentState.activePreset = initialPresetKey;
   const initialData = SCENARIO_PRESETS[initialPresetKey] || SCENARIO_PRESETS.medium;
 
@@ -70,6 +73,9 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
             </button>
           </div>
         </div>
+
+        <!-- Active Selected Project Banner (displayed when an existing project is selected) -->
+        <div id="activeProjectBannerContainer" class="hidden"></div>
 
         <!-- Quick Scenario Presets Bar -->
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-sm bg-surface-container-lowest p-space-sm rounded-xl shadow-sm border border-outline-variant/30">
@@ -724,10 +730,10 @@ export function renderAssessmentView(container, initialPresetKey = 'medium') {
   `;
 
   // Attach interactive events and initial data
-  attachAssessmentEvents(container, initialData);
+  attachAssessmentEvents(container, initialData, initialProjectId);
 }
 
-function attachAssessmentEvents(container, initialData) {
+function attachAssessmentEvents(container, initialData, initialProjectId = null) {
   // 1. Mount Custom Accessible Comboboxes
   const projectTypeMount = container.querySelector('#mount_projectType');
   if (projectTypeMount) {
@@ -818,9 +824,121 @@ function attachAssessmentEvents(container, initialData) {
     readSlot.appendChild(readBtn);
   }
 
+  // Mode Selector & Existing Project Picker
+  const modeSelectBtn = container.querySelector('#modeSelectBtn');
+  const modeSimulateBtn = container.querySelector('#modeSimulateBtn');
+  const activeBannerContainer = container.querySelector('#activeProjectBannerContainer');
+
+  const updateModeStyles = (mode) => {
+    if (mode === 'project') {
+      modeSelectBtn?.classList.remove('text-on-surface-variant');
+      modeSelectBtn?.classList.add('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm', 'font-semibold');
+      modeSimulateBtn?.classList.remove('bg-surface-container-lowest', 'shadow-sm', 'font-semibold');
+      modeSimulateBtn?.classList.add('text-on-surface-variant');
+    } else {
+      modeSimulateBtn?.classList.remove('text-on-surface-variant');
+      modeSimulateBtn?.classList.add('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm', 'font-semibold');
+      modeSelectBtn?.classList.remove('bg-surface-container-lowest', 'shadow-sm', 'font-semibold');
+      modeSelectBtn?.classList.add('text-on-surface-variant');
+    }
+  };
+
+  const clearSelectedProject = () => {
+    currentAssessmentState.selectedProject = null;
+    currentAssessmentState.activeProjectId = null;
+    if (activeBannerContainer) {
+      activeBannerContainer.innerHTML = '';
+      activeBannerContainer.classList.add('hidden');
+    }
+    updateModeStyles('scenario');
+  };
+
+  const renderActiveProjectBanner = (project) => {
+    if (!activeBannerContainer || !project) return;
+    const riskLevel = getRiskLevel(project.delayProbability);
+    activeBannerContainer.innerHTML = `
+      <div class="w-full bg-surface-container-lowest p-space-md rounded-xl shadow-sm border border-secondary/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md animate-fade-in mb-space-sm">
+        <div class="flex items-center gap-space-md">
+          <div class="w-10 h-10 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[24px]">folder_open</span>
+          </div>
+          <div class="flex flex-col">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-tabular-data text-xs font-bold px-2 py-0.5 rounded bg-primary text-on-primary uppercase tracking-wider">${project.id}</span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">${project.sector}</span>
+              <span class="text-xs font-bold px-2 py-0.5 rounded ${project.riskLevel === 'CRITICAL' ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : project.riskLevel === 'HIGH' ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'}">${project.delayProbability}% ${getRiskLevelLabel(project.riskLevel || riskLevel)}</span>
+            </div>
+            <h3 class="font-headline-sm text-base font-bold text-on-surface mt-1">${project.name}</h3>
+            <p class="font-body-sm text-xs text-on-surface-variant">${project.district}, ${project.state} • ${t('detail.stage', 'Stage')}: ${getLocalizedStage(project.stage)} • ${t('detail.overallProgress', 'Progress')}: ${project.progressPct}%</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end flex-wrap">
+          <button id="viewProjectAuditBtn" type="button" class="px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-xs font-semibold flex items-center gap-1 transition-colors">
+            <span class="material-symbols-outlined text-[16px]">visibility</span>
+            <span>${t('detail.detailedAnalysis', 'View Cadastral Audit')}</span>
+          </button>
+          <button id="changeActiveProjectBtn" type="button" class="px-3 py-1.5 rounded-lg bg-secondary-container hover:bg-secondary text-on-surface hover:text-on-secondary font-label-md text-xs font-bold flex items-center gap-1 transition-colors">
+            <span class="material-symbols-outlined text-[16px]">swap_horiz</span>
+            <span>${t('assessment.selectProject', 'Switch Project')}</span>
+          </button>
+          <button id="clearActiveProjectBtn" type="button" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors" title="${t('assessment.testScenario', 'Clear project & return to custom scenario')}">
+            <span class="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      </div>
+    `;
+    activeBannerContainer.classList.remove('hidden');
+
+    activeBannerContainer.querySelector('#viewProjectAuditBtn')?.addEventListener('click', () => {
+      window.location.hash = `#/audit?id=${encodeURIComponent(project.id)}`;
+    });
+    activeBannerContainer.querySelector('#changeActiveProjectBtn')?.addEventListener('click', () => {
+      handleOpenProjectPicker();
+    });
+    activeBannerContainer.querySelector('#clearActiveProjectBtn')?.addEventListener('click', () => {
+      clearSelectedProject();
+    });
+  };
+
+  const handleSelectProject = (project) => {
+    currentAssessmentState.selectedProject = project;
+    currentAssessmentState.activeProjectId = project.id;
+    updateModeStyles('project');
+    renderActiveProjectBanner(project);
+
+    // Apply corresponding preset values and project-specific attributes
+    const presetKey = project.presetKey || 'medium';
+    currentAssessmentState.activePreset = presetKey;
+    const preset = SCENARIO_PRESETS[presetKey] || SCENARIO_PRESETS.medium;
+    const projectValues = {
+      ...preset.values,
+      project_type: project.type || preset.values.project_type,
+      current_stage: project.stage ? (project.stage.includes('3A') ? 'Survey' : project.stage.includes('Declaration') ? 'Notification' : project.stage.includes('Award') ? 'Compensation' : project.stage) : preset.values.current_stage,
+      acquisition_progress_pct: project.progressPct !== undefined ? project.progressPct : preset.values.acquisition_progress_pct,
+    };
+    populateForm(projectValues);
+    calculateDocCompletion();
+    triggerAssessment(container);
+  };
+
+  const handleOpenProjectPicker = () => {
+    openProjectPickerModal({
+      activeProjectId: currentAssessmentState.activeProjectId,
+      onSelect: handleSelectProject,
+    });
+  };
+
+  if (modeSelectBtn) {
+    modeSelectBtn.addEventListener('click', handleOpenProjectPicker);
+  }
+  if (modeSimulateBtn) {
+    modeSimulateBtn.addEventListener('click', clearSelectedProject);
+  }
+
   // Presets buttons
   container.querySelectorAll('.preset-pill').forEach(btn => {
     btn.addEventListener('click', () => {
+      clearSelectedProject();
       const key = btn.getAttribute('data-preset');
       container.querySelectorAll('.preset-pill').forEach(el => {
         el.classList.remove('bg-surface-container-high', 'ring-1', 'ring-secondary');
@@ -905,6 +1023,15 @@ function attachAssessmentEvents(container, initialData) {
         accordionChevron.style.transform = 'rotate(0deg)';
       }
     });
+  }
+
+  // If initialProjectId was provided (e.g. from Projects Directory or URL query), select it
+  if (initialProjectId) {
+    const matched = SAMPLE_PROJECTS.find(p => p.id === initialProjectId);
+    if (matched) {
+      handleSelectProject(matched);
+      return;
+    }
   }
 
   // Automatically run first assessment on mount

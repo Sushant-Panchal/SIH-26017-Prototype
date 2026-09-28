@@ -557,7 +557,7 @@ async def list_cases(
     if status:
         query["status"] = status
     if risk_level:
-        query["risk_level"] = risk_level.upper()
+        query["risk_level"] = {"$regex": f"^{risk_level}$", "$options": "i"}
     if project_id:
         query["project_id"] = project_id
     if category:
@@ -1371,7 +1371,7 @@ async def get_user_notifications(user_id: str, auth_user: Optional[dict] = Depen
     db = get_database()
     await get_user_or_404(user_id, db=db)
     notifs = db.get_collection("notifications")
-    cursor = notifs.find({"user_id": user_id}).sort("created_at", -1)
+    cursor = notifs.find({"$or": [{"user_id": user_id}, {"recipient_id": user_id}]}).sort("created_at", -1)
     results = await cursor.to_list(100)
     return [NotificationResponse(**sanitize_doc(d)) for d in results]
 
@@ -1385,7 +1385,8 @@ async def mark_notification_read(notification_id: str, auth_user: Optional[dict]
         raise HTTPException(status_code=404, detail=f"Notification '{notification_id}' not found.")
 
     if auth_user and auth_user.get("role") == UserRole.CITIZEN.value:
-        if notif.get("user_id") != auth_user.get("user_id"):
+        target_uid = notif.get("user_id") or notif.get("recipient_id")
+        if target_uid != auth_user.get("user_id"):
             raise HTTPException(
                 status_code=403,
                 detail="Forbidden: You cannot mark another citizen's notification as read.",

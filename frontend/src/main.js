@@ -136,8 +136,12 @@ class BhoomiSakhaApp {
         this.isAuthInitialized = true;
         this.setupUserSession();
         this.updateLanguageUI();
-        if (authService.isAuthenticated()) {
-          realtimeService.connect();
+        try {
+          if (authService.isAuthenticated()) {
+            realtimeService.connect();
+          }
+        } catch (realtimeErr) {
+          console.warn('[RealTime] Non-blocking connection error:', realtimeErr);
         }
         this.handleRouting();
       }
@@ -897,7 +901,8 @@ class BhoomiSakhaApp {
 
     const rawHash = window.location.hash || '';
     const cleanHash = rawHash.replace(/^#\/?/, '');
-    const [path, queryString] = cleanHash.split('?');
+    const [rawPath, queryString] = cleanHash.split('?');
+    let path = rawPath;
     const params = new URLSearchParams(queryString || '');
 
     const isAuth = authService.isAuthenticated();
@@ -937,38 +942,38 @@ class BhoomiSakhaApp {
     // ========================================================
     // CASE 2: Authenticated User
     // ========================================================
-    // Prevent authenticated users from lingering on login/register
+    // Prevent authenticated users from lingering on login/register or blank root
     if (path === 'login' || path === 'register' || !path) {
-      const destination = (user.role === 'citizen') ? '#/citizen-dashboard' : '#/dashboard';
-      window.location.hash = destination;
-      return;
+      const destination = (user?.role === 'citizen') ? 'citizen-dashboard' : 'dashboard';
+      if (window.location.hash !== `#/${destination}`) {
+        window.location.hash = `#/${destination}`;
+      }
+      path = destination;
     }
 
     // Enforce Citizen Role Isolation
-    if (user.role === 'citizen') {
+    if (user?.role === 'citizen') {
       if (OFFICER_ROUTES.includes(path)) {
         this.showToast(t('auth.officerAccessDenied', 'Unauthorized: Officer portal access denied for citizen accounts.'), 'warning');
         window.location.hash = '#/citizen-dashboard';
-        return;
-      }
-      if (!CITIZEN_ROUTES.includes(path) && !SHARED_AUTH_ROUTES.includes(path)) {
+        path = 'citizen-dashboard';
+      } else if (!CITIZEN_ROUTES.includes(path) && !SHARED_AUTH_ROUTES.includes(path)) {
         window.location.hash = '#/citizen-dashboard';
-        return;
+        path = 'citizen-dashboard';
       }
       if (this.currentPortal !== 'citizen') {
         this.setPortalMode('citizen', false);
       }
     }
     // Enforce Officer Role Isolation
-    else if (user.role === 'officer' || user.role === 'super_admin') {
+    else if (user?.role === 'officer' || user?.role === 'super_admin') {
       if (CITIZEN_ROUTES.includes(path)) {
         this.showToast(t('auth.citizenAccessDenied', 'Unauthorized: Citizen-only portal route. Use Officer Case Queue.'), 'warning');
         window.location.hash = '#/dashboard';
-        return;
-      }
-      if (!OFFICER_ROUTES.includes(path) && !SHARED_AUTH_ROUTES.includes(path)) {
+        path = 'dashboard';
+      } else if (!OFFICER_ROUTES.includes(path) && !SHARED_AUTH_ROUTES.includes(path)) {
         window.location.hash = '#/dashboard';
-        return;
+        path = 'dashboard';
       }
       if (this.currentPortal !== 'officer') {
         this.setPortalMode('officer', false);
@@ -979,82 +984,112 @@ class BhoomiSakhaApp {
     this.updateNavState(this.currentView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Render authorized view
-    switch (this.currentView) {
-      case 'citizen-dashboard':
-        renderCitizenDashboardView(this.container);
-        break;
+    // Render authorized view safely
+    try {
+      switch (this.currentView) {
+        case 'citizen-dashboard':
+          renderCitizenDashboardView(this.container);
+          break;
 
-      case 'citizen-lands':
-        renderCitizenLandView(this.container);
-        break;
+        case 'citizen-lands':
+          renderCitizenLandView(this.container);
+          break;
 
-      case 'citizen-risk':
-        renderCitizenRiskView(this.container);
-        break;
+        case 'citizen-risk':
+          renderCitizenRiskView(this.container);
+          break;
 
-      case 'citizen-complaint':
-        renderCitizenComplaintView(this.container);
-        break;
+        case 'citizen-complaint':
+          renderCitizenComplaintView(this.container);
+          break;
 
-      case 'citizen-cases':
-        renderCitizenCaseTrackingView(this.container);
-        break;
+        case 'citizen-cases':
+          renderCitizenCaseTrackingView(this.container);
+          break;
 
-      case 'cases':
-        renderOfficerCasesView(this.container);
-        break;
+        case 'cases':
+          renderOfficerCasesView(this.container);
+          break;
 
-      case 'officer-case-workspace':
-        renderOfficerWorkspaceView(this.container);
-        break;
+        case 'officer-case-workspace':
+          renderOfficerWorkspaceView(this.container);
+          break;
 
-      case 'notifications':
-        renderNotificationsView(this.container, () => this.updateNotificationBadge());
-        break;
+        case 'notifications':
+          renderNotificationsView(this.container, () => this.updateNotificationBadge());
+          break;
 
-      case 'assessment':
-        const preset = params.get('preset') || 'medium';
-        renderAssessmentView(this.container, preset);
-        break;
+        case 'assessment':
+          const preset = params.get('preset') || 'medium';
+          const projId = params.get('id');
+          renderAssessmentView(this.container, preset, projId);
+          break;
 
-      case 'projects':
-        renderProjectsView(
-          this.container,
-          (presetKey) => {
-            window.location.hash = `#/assessment?preset=${presetKey}`;
-          },
-          (projectId) => {
-            window.location.hash = `#/audit?id=${projectId}`;
-          }
-        );
-        break;
+        case 'projects':
+          renderProjectsView(
+            this.container,
+            (presetKey) => {
+              window.location.hash = `#/assessment?preset=${presetKey}`;
+            },
+            (projectId) => {
+              window.location.hash = `#/audit?id=${projectId}`;
+            }
+          );
+          break;
 
-      case 'audit':
-        const projectId = params.get('id') || 'BF-NH-2024-09';
-        renderDetailView(
-          this.container,
-          projectId,
-          (presetKey) => {
-            window.location.hash = `#/assessment?preset=${presetKey}`;
-          }
-        );
-        break;
+        case 'audit':
+          const projectId = params.get('id') || 'BF-NH-2024-09';
+          renderDetailView(
+            this.container,
+            projectId,
+            (presetKey) => {
+              window.location.hash = `#/assessment?preset=${presetKey}`;
+            }
+          );
+          break;
 
-      case 'dashboard':
-      default:
-        this.currentView = 'dashboard';
-        renderDashboardView(
-          this.container,
-          (presetKey) => {
-            window.location.hash = `#/assessment?preset=${presetKey}`;
-          },
-          (projectId) => {
-            window.location.hash = `#/audit?id=${projectId}`;
-          }
-        );
-        break;
+        case 'dashboard':
+        default:
+          this.currentView = 'dashboard';
+          renderDashboardView(
+            this.container,
+            (presetKey) => {
+              window.location.hash = `#/assessment?preset=${presetKey}`;
+            },
+            (projectId) => {
+              window.location.hash = `#/audit?id=${projectId}`;
+            }
+          );
+          break;
+      }
+    } catch (renderErr) {
+      console.error('[Router] Error mounting view:', this.currentView, renderErr);
+      this.renderRouterErrorView(renderErr);
     }
+  }
+
+  renderRouterErrorView(err) {
+    if (!this.container) return;
+    this.container.innerHTML = `
+      <div class="min-h-[50vh] flex flex-col items-center justify-center text-center p-8 space-y-4">
+        <div class="w-14 h-14 rounded-full bg-error-container/40 text-error flex items-center justify-center">
+          <span class="material-symbols-outlined text-[28px]">error</span>
+        </div>
+        <div class="space-y-1">
+          <h3 class="font-headline-sm text-base font-bold text-on-surface">Unable to load the requested screen</h3>
+          <p class="font-body-sm text-xs text-on-surface-variant max-w-sm">An unexpected interface error occurred. Please click below to reload your dashboard.</p>
+        </div>
+        <button id="routerErrorRetryBtn" type="button" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-xs font-semibold shadow-sm hover:opacity-95 transition-all">
+          Reload Dashboard
+        </button>
+      </div>
+    `;
+    this.container.querySelector('#routerErrorRetryBtn')?.addEventListener('click', () => {
+      const user = authService.getStoredUser();
+      const dest = user?.role === 'citizen' ? '#/citizen-dashboard' : '#/dashboard';
+      window.location.hash = dest;
+      this.handleRouting();
+    });
   }
 
   /**
