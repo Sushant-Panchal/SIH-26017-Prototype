@@ -152,6 +152,22 @@ async def logout(current_user: dict = Depends(get_current_user)):
     return {"message": "Session terminated successfully."}
 
 
+@router.get("/diagnostics/jwt")
+async def get_jwt_diagnostics(current_user: dict = Depends(get_current_user)):
+    """
+    Authenticated security diagnostic endpoint.
+    Unavailable to unauthenticated users (requires valid token).
+    Never exposes secrets, keys, or hashes.
+    """
+    if current_user.get("role") not in ("officer", "super_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Diagnostics restricted to authorized administrators.",
+        )
+    from .auth import get_jwt_secret_diagnostics
+    return get_jwt_secret_diagnostics()
+
+
 def secrets_token(n: int = 8) -> str:
     import secrets
     return secrets.token_hex(n)

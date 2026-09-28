@@ -26,6 +26,8 @@ FORBIDDEN_DEV_JWT_SECRETS = {
     DEFAULT_JWT_SECRET,
     "bhoomi-sakha-production-secret-key-phase2-sih26017",
     "your-random-32-character-secret-key-here",
+    "replace-with-a-strong-secret",
+    "your-secure-officer-registration-passphrase",
 }
 
 FORBIDDEN_DEV_OFFICER_KEYS = {
@@ -40,15 +42,52 @@ def get_jwt_secret() -> str:
     In production, strictly enforces that an explicit, secure JWT_SECRET is provided
     and forbids falling back to known repository or example defaults.
     """
-    secret = os.getenv("JWT_SECRET", "").strip()
+    raw_secret = os.getenv("JWT_SECRET", "")
+    secret = raw_secret.strip().strip("'\"")
     if is_production_environment():
-        if not secret or secret in FORBIDDEN_DEV_JWT_SECRETS:
+        if not secret:
             raise RuntimeError(
                 "Production environment requires an explicitly configured, secure JWT_SECRET environment variable. "
-                "Default or empty JWT secret is strictly prohibited in production."
+                "JWT_SECRET is currently unset or empty in the environment."
+            )
+        if secret in FORBIDDEN_DEV_JWT_SECRETS:
+            raise RuntimeError(
+                "Production environment requires an explicitly configured, secure JWT_SECRET environment variable. "
+                "The provided JWT_SECRET matches a known development default or example placeholder, which is strictly prohibited in production. "
+                "Please configure a unique, high-entropy secret in your deployment environment."
+            )
+        if len(secret) < 32:
+            raise RuntimeError(
+                "Production environment requires an explicitly configured, secure JWT_SECRET environment variable. "
+                "The provided JWT_SECRET is too short (must be at least 32 characters for HS256 security)."
             )
         return secret
     return secret or DEFAULT_JWT_SECRET
+
+
+def get_jwt_secret_diagnostics() -> Dict[str, Any]:
+    """
+    Returns safe cryptographic configuration diagnostics without exposing secrets.
+    """
+    raw_secret = os.getenv("JWT_SECRET", "")
+    secret = raw_secret.strip().strip("'\"")
+    is_prod = is_production_environment()
+
+    present = bool(secret)
+    is_forbidden = secret in FORBIDDEN_DEV_JWT_SECRETS
+    has_sufficient_length = len(secret) >= 32
+
+    if is_prod:
+        is_valid = present and not is_forbidden and has_sufficient_length
+    else:
+        is_valid = bool(secret or DEFAULT_JWT_SECRET)
+
+    return {
+        "JWT_SECRET_PRESENT": present,
+        "JWT_SECRET_LENGTH": len(secret),
+        "JWT_SECRET_VALID": is_valid,
+        "is_production": is_prod,
+    }
 
 
 def get_officer_registration_key() -> str:
@@ -57,7 +96,8 @@ def get_officer_registration_key() -> str:
     In production, strictly enforces that an explicit, secure OFFICER_REGISTRATION_KEY is provided
     and forbids falling back to any default or placeholder value.
     """
-    key = os.getenv("OFFICER_REGISTRATION_KEY", "").strip()
+    raw_key = os.getenv("OFFICER_REGISTRATION_KEY", "")
+    key = raw_key.strip().strip("'\"")
     if is_production_environment():
         if not key or key in FORBIDDEN_DEV_OFFICER_KEYS:
             raise RuntimeError(

@@ -27,6 +27,18 @@ FEATURE_NAMES_PATH = "models/feature_names.joblib"
 async def lifespan(app: FastAPI):
     # Establish persistent database indexes on startup
     await init_indexes()
+
+    # Safe startup security diagnostics (NEVER prints or leaks secrets)
+    from .auth import get_jwt_secret_diagnostics
+    diag = get_jwt_secret_diagnostics()
+    logger.info(
+        "Security Configuration Diagnostic: ENVIRONMENT=%s is_production=%s JWT_SECRET_PRESENT=%s JWT_SECRET_LENGTH=%d JWT_SECRET_VALID=%s",
+        os.getenv("ENVIRONMENT", "development"),
+        diag["is_production"],
+        diag["JWT_SECRET_PRESENT"],
+        diag["JWT_SECRET_LENGTH"],
+        diag["JWT_SECRET_VALID"],
+    )
     yield
 
 

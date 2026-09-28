@@ -23,9 +23,11 @@ from src.database import (
 )
 from src.auth import (
     get_jwt_secret,
+    get_jwt_secret_diagnostics,
     get_officer_registration_key,
     DEFAULT_JWT_SECRET,
     DEFAULT_OFFICER_REGISTRATION_KEY,
+    FORBIDDEN_DEV_JWT_SECRETS,
     create_access_token,
     decode_access_token,
 )
@@ -164,9 +166,20 @@ def test_officer_key_never_leaked_in_responses_or_errors(monkeypatch):
 
 
 
-def test_production_jwt_secret_rejects_default(monkeypatch):
+def test_production_jwt_secret_valid_accepted(monkeypatch):
     """
-    In production mode, the server strictly refuses to use the default repository JWT secret.
+    A valid, high-entropy JWT_SECRET (>= 32 chars, not matching forbidden defaults)
+    is cleanly accepted in production mode.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    valid_secret = "SuperSecureGovKeyForProductionJwtSigning2026!#"
+    monkeypatch.setenv("JWT_SECRET", valid_secret)
+    assert get_jwt_secret() == valid_secret
+
+
+def test_production_jwt_secret_rejects_missing(monkeypatch):
+    """
+    In production mode, a missing JWT_SECRET causes immediate secure configuration failure.
     """
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("JWT_SECRET", raising=False)
@@ -174,6 +187,117 @@ def test_production_jwt_secret_rejects_default(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         get_jwt_secret()
     assert "JWT_SECRET" in str(exc_info.value)
+    assert "unset or empty" in str(exc_info.value)
+
+
+def test_production_jwt_secret_rejects_empty_and_whitespace(monkeypatch):
+    """
+    In production mode, empty string or whitespace-only JWT_SECRET is strictly rejected.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    for empty_val in ["", "   ", "\t\n", '""', "''"]:
+        monkeypatch.setenv("JWT_SECRET", empty_val)
+        with pytest.raises(RuntimeError) as exc_info:
+            get_jwt_secret()
+        assert "JWT_SECRET" in str(exc_info.value)
+
+
+def test_production_jwt_secret_rejects_known_placeholders(monkeypatch):
+    """
+    In production mode, known repository defaults and example placeholders
+    are strictly rejected.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    for placeholder in FORBIDDEN_DEV_JWT_SECRETS:
+        monkeypatch.setenv("JWT_SECRET", placeholder)
+        with pytest.raises(RuntimeError) as exc_info:
+            get_jwt_secret()
+        assert "JWT_SECRET" in str(exc_info.value)
+        assert "matches a known development default or example placeholder" in str(exc_info.value)
+
+
+def test_production_jwt_secret_rejects_short_insecure(monkeypatch):
+    """
+    In production mode, secrets shorter than 32 characters are rejected for HS256 security.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET", "short-key-12345")
+    with pytest.raises(RuntimeError) as exc_info:
+        get_jwt_secret()
+    assert "JWT_SECRET" in str(exc_info.value)
+    assert "too short" in str(exc_info.value)
+
+
+def test_production_jwt_secret_strips_surrounding_quotes(monkeypatch):
+    """
+    Surrounding quotes accidentally added in dashboard configuration are cleanly stripped.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    raw = '"AValidHighEntropyProductionSecretKey32CharsLong!"'
+    monkeypatch.setenv("JWT_SECRET", raw)
+    assert get_jwt_secret() == "AValidHighEntropyProductionSecretKey32CharsLong!"
+
+
+def test_jwt_diagnostics_safe(monkeypatch):
+    """
+    Verifies that get_jwt_secret_diagnostics returns presence and validity flags
+    without exposing the actual secret value.
+    """
+    test_secret = "AnotherHighEntropySecretKeyThatMustBeProtected!"
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET", test_secret)
+
+    diag = get_jwt_secret_diagnostics()
+    assert diag["JWT_SECRET_PRESENT"] is True
+    assert diag["JWT_SECRET_LENGTH"] == len(test_secret)
+    assert diag["JWT_SECRET_VALID"] is True
+    assert diag["is_production"] is True
+
+    # Assert secret string is never contained in diagnostic dictionary
+    assert test_secret not in str(diag)
+
+
+def test_jwt_diagnostics_endpoint_unauthenticated_blocked():
+    """
+    Verifies that unauthenticated or unauthorized users cannot access /api/auth/diagnostics/jwt.
+    """
+    # 1. Unauthenticated request
+    resp = client.get("/api/auth/diagnostics/jwt")
+    assert resp.status_code == 401
+
+    # 2. Citizen authenticated request
+    cit_resp = client.post("/api/auth/register", json={
+        "name": "Citizen Diagnostic",
+        "email": "cit_diag@example.com",
+        "role": "citizen",
+        "password": "Password@123",
+    }).json()
+    citizen_token = cit_resp["access_token"]
+    resp_cit = client.get(
+        "/api/auth/diagnostics/jwt",
+        headers={"Authorization": f"Bearer {citizen_token}"}
+    )
+    assert resp_cit.status_code == 403
+
+    # 3. Officer authenticated request
+    off_resp = client.post("/api/auth/register", json={
+        "name": "Officer Diagnostic",
+        "email": "off_diag@gov.in",
+        "role": "officer",
+        "password": "Password@123",
+        "officer_key": get_officer_registration_key(),
+    }).json()
+    officer_token = off_resp["access_token"]
+    resp_off = client.get(
+        "/api/auth/diagnostics/jwt",
+        headers={"Authorization": f"Bearer {officer_token}"}
+    )
+    assert resp_off.status_code == 200
+    data = resp_off.json()
+    assert "JWT_SECRET_PRESENT" in data
+    assert "JWT_SECRET_LENGTH" in data
+    assert "JWT_SECRET_VALID" in data
+    assert "is_production" in data
 
 
 # ============================================================
